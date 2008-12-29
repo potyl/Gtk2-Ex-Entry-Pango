@@ -65,11 +65,29 @@ Creates a new instance.
 use strict;
 use warnings;
 
+use Glib qw(TRUE FALSE);
 use Gtk2;
+use Data::Dumper;
 
 our $VERSION = '0.01';
 
+# See http://gtk2-perl.sourceforge.net/doc/pod/Glib/Object/Subclass.html
 use Glib::Object::Subclass 'Gtk2::Entry' =>
+
+	signals => {
+		changed      => \&callback_changed,
+		expose_event => \&callback_expose_event,
+	},
+
+	properties => [
+		Glib::ParamSpec->string(
+			'markup',
+			'markup',
+			'The Pango markup used for displaying the contents of entry.',
+			'',
+			Glib::G_PARAM_READWRITE
+		),
+	],
 ;
 
 
@@ -109,9 +127,74 @@ sub set_markup {
 }
 
 
+sub SET_PROPERTY {
+	my ($self, $pspec, $newval) = @_;
+	my $oldval = $self->{$pspec->get_name} || '';
+printf "Setting %s = %s\n", $pspec->get_name, $newval;
+	$self->{$pspec->get_name} = $newval;  # per default GET_PROPERTY
+
+	if ($oldval ne $newval) {
+		$self->set_text($newval);
+	}
+}
+
+
+
+sub callback_changed {
+	my $self = shift;
+
+	$self->apply_markup();
+	
+	if ($self->realized) {
+		my $size = $self->allocation;
+		my $rectangle = Gtk2::Gdk::Rectangle->new(0, 0, $size->width, $size->height);
+		$self->window->invalidate_rect($rectangle, TRUE);
+	}
+
+	$self->signal_chain_from_overridden(@_);
+}
+
+
+
+sub callback_expose_event {
+	my $self = shift;
+	my ($event) = @_;
+	
+	$self->apply_markup();
+	$self->signal_chain_from_overridden(@_);
+}
+
+
+#
+# Applies the Pango markup if a markup was set. Returns TRUE if the markup was
+# applied FALSE otherwise.
+#
+sub apply_markup {
+	my $self = shift;
+
+	my $markup = $self->{markup};
+	return FALSE unless defined $markup;
+	print  "Applying markup '$markup'\n";
+	printf "Text is         '%s'\n", $self->get_text;
+	print  "\n";
+	
+	$self->get_layout->set_markup($markup);
+	return TRUE;
+}
+
+
 # Return a true value
 1;
 
+=head1 PROPERTIES
+
+The following properties are added by this widget:
+
+=head2 markup
+
+The markup text used by this widget.
+
+(string : readable / writable / private)
 
 =head1 AUTHORS
 
