@@ -35,10 +35,7 @@ sub main {
 	$window->signal_connect(delete_event => sub { Gtk2->main_quit(); });
 
 	$button_print->signal_connect(clicked => sub {
-		my $markup = $entry->get('markup');
-		printf "Markup is %s\n", defined $markup ? "'$markup'" : "undef";
-		printf "Text   is '%s'\n", $entry->get_text;
-		print "\n";
+		$entry->debug();
 	});
 
 	$button_markup->signal_connect(clicked => sub {
