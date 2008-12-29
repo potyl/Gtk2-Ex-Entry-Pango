@@ -140,7 +140,7 @@ print "Changed field markup\n";
 		#  Tell the callback_changed event that the text was changed
 		$self->{changed} = 1;
 print "Calling changed\n";
-		$self->signal_emit('changed');
+#		$self->signal_emit('changed');
 print "Called changed\n";
 	}
 	else {
@@ -197,12 +197,28 @@ sub apply_markup {
 
 	my $markup = $self->{markup};
 	return FALSE unless defined $markup;
-	print  "Applying markup '$markup'\n";
-	printf "Text is         '%s'\n", $self->get_text;
-	print  "\n";
+	$self->debug();
+	
+	# FIXME this doesn't seem to be enough. The problem is that if the markup
+	#       changes the width of the string there will be big problems. The string
+	#       will be rendered properly but the entry will not have the right data!
+	
+	#       Instead try to do $self->set_text($text) and $self->layout->set_attributes().
+	#       Use the following function: ($attr_list, $text, $accel_char) = Gtk2::Pango->parse_markup ($markup_text, $accel_marker)
+	#       See: http://gtk2-perl.sourceforge.net/doc/pod/Gtk2/Pango/AttrList.html#_attr_list_text_acce
 	
 	$self->get_layout->set_markup($markup);
 	return TRUE;
+}
+
+
+sub debug {
+	my $self = shift;
+
+	my $markup = $self->get('markup');
+	printf "Markup is %s\n", defined $markup ? "'$markup'" : "undef";
+	printf "Text   is '%s'\n", $self->get_text;
+	print "\n";
 }
 
 
