@@ -1,0 +1,6 @@
+Changes
+Makefile.PL
+MANIFEST
+README
+t/Gtk2-Ex-Entry-Pango.t
+lib/Gtk2/Ex/Entry/Pango.pm
