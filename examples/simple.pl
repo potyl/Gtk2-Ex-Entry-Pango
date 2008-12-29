@@ -16,25 +16,37 @@ sub main {
 	my $window = Gtk2::Window->new();
 	my $entry = Gtk2::Ex::Entry::Pango->new();
 	
-	my $button = Gtk2::Button->new('Action');
+	my $button_print = Gtk2::Button->new('Print');
+	my $button_markup = Gtk2::Button->new('Markup');
 	
 	my $box = new Gtk2::HBox(FALSE, 0);
 	$box->pack_start($entry, TRUE, TRUE, 0);
-	$box->pack_start($button, FALSE, FALSE, 0);
+	$box->pack_start($button_print, FALSE, FALSE, 0);
+	$box->pack_start($button_markup, FALSE, FALSE, 0);
 	$window->add($box);
 	
 	# Use pango markup
 	$entry->set_markup(
 		'<span style="italic">Pango markup</span> is <span underline="error" underline_color="red">NOT</span> hard'
 	);
-	$entry->set(
-		markup => '<b>smaller</b> text'
-	);
 	
+
+	# Connect the signals
 	$window->signal_connect(delete_event => sub { Gtk2->main_quit(); });
-	$button->signal_connect(clicked => sub {
-		printf "Markup is %s\n", $entry->get('markup');
+
+	$button_print->signal_connect(clicked => sub {
+		my $markup = $entry->get('markup');
+		printf "Markup is %s\n", defined $markup ? "'$markup'" : "undef";
+		printf "Text   is '%s'\n", $entry->get_text;
+		print "\n";
 	});
+
+	$button_markup->signal_connect(clicked => sub {
+		$entry->set(
+			markup => '<b>smaller</b> text'
+		);
+	});
+
 	
 	$window->set_default_size(850, -1);
 	$window->show_all();
