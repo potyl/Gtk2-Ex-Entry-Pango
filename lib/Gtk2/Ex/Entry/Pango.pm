@@ -123,19 +123,32 @@ You might want to use the following code snipet for escaping the characters:
 sub set_markup {
 	my $self = shift;
 	my ($markup) = @_;
-	$self->set_text($markup);
+	$self->set(markup => $markup);
 }
 
 
 sub SET_PROPERTY {
 	my ($self, $pspec, $newval) = @_;
-	my $oldval = $self->{$pspec->get_name} || '';
-printf "Setting %s = %s\n", $pspec->get_name, $newval;
-	$self->{$pspec->get_name} = $newval;  # per default GET_PROPERTY
+	
+	my $field = $pspec->get_name;
+	my $oldval = $self->{$field} || '';
+printf "Setting %s = %s\n", $field, $newval;
+	$self->{$field} = $newval;  # per default GET_PROPERTY
 
-	if ($oldval ne $newval) {
-		$self->set_text($newval);
+	if ($field eq 'markup') {
+print "Changed field markup\n";
+		#  Tell the callback_changed event that the text was changed
+		$self->{changed} = 1;
+print "Calling changed\n";
+		$self->signal_emit('changed');
+print "Called changed\n";
 	}
+	else {
+		delete $self->{changed};
+	}
+#	if ($oldval ne $newval) {
+#		$self->set_text($newval);
+#	}
 }
 
 
@@ -143,7 +156,17 @@ printf "Setting %s = %s\n", $pspec->get_name, $newval;
 sub callback_changed {
 	my $self = shift;
 
-	$self->apply_markup();
+printf "Callback changed called (changed? %s)\n", $self->{changed} ? 'TRUE' : 'FALSE';
+	if ($self->{changed}) {
+		$self->apply_markup();
+	}
+	else {
+		# The text was changed without using markup, this means that
+		# $self->set_text() was called.
+		delete $self->{markup};
+	}
+	delete $self->{changed};
+
 	
 	if ($self->realized) {
 		my $size = $self->allocation;
