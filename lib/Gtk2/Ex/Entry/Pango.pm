@@ -92,6 +92,7 @@ use Glib::Object::Subclass 'Gtk2::Entry' =>
 		}
 	},
 
+
 	properties => [
 		Glib::ParamSpec->string(
 			'markup',
@@ -104,7 +105,7 @@ use Glib::Object::Subclass 'Gtk2::Entry' =>
 		Glib::ParamSpec->boolean(
 			'internal-change',
 			'internal-change',
-			'Tells the changed callback if we changed the text.',
+			'Tells the changed callback if the text was changed by this widget.',
 			'',
 			['readable', 'writable'],
 		),
@@ -123,7 +124,7 @@ sub SET_PROPERTY {
 	$self->{$field} = $value;
 
 	if ($field eq 'markup') {
-		$self->_set_markup($value);
+		$self->apply_markup($value);
 	}
 }
 
@@ -164,22 +165,18 @@ sub set_markup {
 
 
 #
-# The actual setter for the property 'markup'. The markup string is parsed into
-# a text to be displayed an attribute list (the styles to apply). The text is
-# added normally to the widget as if it was a Gtk2::Entry, while the attributes
-# are stored in order to be latter applied each time that the widget is
-# rendered.
+# Applies the markup to the widget. The markup string is parsed into a text to
+# be displayed and an attribute list (the styles to apply). The text is added
+# normally to the widget as if it was a Gtk2::Entry, while the attributes are
+# applied latter to the widget.
 #
-# The actual Pango markup string doesn't need to be stored by this widget and is
-# discarded.
-#
-sub _set_markup {
+sub apply_markup {
 	my $self = shift;
 	my ($markup, $set_text) = @_;
 
 	# Parse the markup, this will die if the markup is invalid. It's better to
 	# to let the caller know if there was an error than to wait until the
-	# callbacks reparse the markup
+	# callbacks reparse the markup.
 	my ($attributes, $text);
 	eval {
 		my $pango = defined $markup ? $markup : '';
@@ -270,9 +267,9 @@ sub callback_expose_event {
 	# style has to be applied afterwards.
 	#
 
-	if ($self->{markup}) {
-		my ($attributes, $text) = Gtk2::Pango->parse_markup($self->{markup});
-		$self->set_text($text);
+	my $markup = $self->get('markup');
+	if ($markup) {
+		my ($attributes, $text) = Gtk2::Pango->parse_markup($markup);
 		$self->get_layout->set_attributes($attributes);
 	}
 
