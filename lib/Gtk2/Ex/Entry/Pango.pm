@@ -141,6 +141,7 @@ print "Changed field markup\n";
 		$self->{changed} = 1;
 print "Calling changed\n";
 #		$self->signal_emit('changed');
+		$self->apply_markup();
 print "Called changed\n";
 	}
 	else {
@@ -207,7 +208,13 @@ sub apply_markup {
 	#       Use the following function: ($attr_list, $text, $accel_char) = Gtk2::Pango->parse_markup ($markup_text, $accel_marker)
 	#       See: http://gtk2-perl.sourceforge.net/doc/pod/Gtk2/Pango/AttrList.html#_attr_list_text_acce
 	
-	$self->get_layout->set_markup($markup);
+	my ($attributes, $text) = Gtk2::Pango->parse_markup($markup);
+#printf "Layout is %s\n", $self->get_layout;
+	$self->set_text($text);
+	$self->get_layout->set_attributes($attributes);
+	
+	
+	#$self->get_layout->set_markup($markup);
 	return TRUE;
 }
 
