@@ -44,6 +44,13 @@ C<Gtk2::Ex::Entry::Pango> is a L<Gtk2::Entry> that can accept Pango markup as
 input (for more information about Pango text markup language see 
 L<http://library.gnome.org/devel/pango/stable/PangoMarkupFormat.html>).
 
+Keep in mind that a C<Gtk2::Entry> is a simple widget that doesn't support
+advanced text editing and that the markup styles are ephemeral. This means that
+if the widget's text is set using Pango markup than the rendering styles will
+disappear as soon as the users edits the text, even a single key stroke will
+suffice. If the markup style has to persist it's up to the caller to do it by
+registering a I<changed> signal callback and calling L</set_markup>.
+
 =head1 INTERFACES
 
 	Glib::Object::_Unregistered::AtkImplementorIface
@@ -106,10 +113,6 @@ sub INIT_INSTANCE {
 	# The Pango attributes to apply to the text. If set to undef then there are no
 	# attributes and the text is rendered normally.
 	$self->{attributes} = undef;
-
-	# The actual markup string to render. This field is not needed at all and
-	# could be removed in the future.
-	$self->{markup} = undef;
 }
 
 
@@ -120,13 +123,13 @@ sub SET_PROPERTY {
 	my ($self, $pspec, $value) = @_;
 	
 	my $field = $pspec->get_name;
-	$self->{$field} = $value;
 
 	if ($field eq 'markup') {
+		# The widget doesn't need to keep the value of the markup, just to parse it
 		$self->_set_markup($value);
 	}
-	elsif ($field eq 'attributes') {
-		print "Setting attributes\n";	
+	else {
+		$self->{$field} = $value;
 	}
 }
 
@@ -134,11 +137,7 @@ sub SET_PROPERTY {
 
 =head2 set_markup
 
-Sets the text of the entry .
-Parses str which is marked up with the Pango text markup language, setting the
-label's text and attribute list based on the parse results. If the string has
-external data, you may need to escape it with g_markup_escape_text() or 
-g_markup_printf_escaped(): 
+Sets the text of the entry using Pango markup.
 
 Parameters:
 
@@ -178,13 +177,17 @@ sub set_markup {
 # are stored in order to be latter applied each time that the widget is
 # rendered.
 #
+# The actual Pango markup string doesn't need to be stored by this widget and is
+# discarded.
+#
 sub _set_markup {
 	my $self = shift;
 	my ($markup) = @_;
 
 	my ($attributes, $text);
 	eval {
-		($attributes, $text) = Gtk2::Pango->parse_markup($markup);
+		my $pango = defined $markup ? $markup : '';
+		($attributes, $text) = Gtk2::Pango->parse_markup($pango);
 	};
 	if ($@) {
 		warn "Failed to parse the markup $markup because $@";
@@ -225,10 +228,10 @@ sub callback_changed {
 	my $self = shift;
 
 	if (! $self->{internal_change}) {
-		# The text was changed as if it was a normal Gtk2::Entry through set_text()
-		# or set(text => $text). This means that we have to remove the markup code.
-		# Now the widget will render a plain text string.
-		$self->set_markup(undef);
+		# The text was changed as if it was a normal Gtk2::Entry either through
+		# $widget->set_text($text) or $widget->set(text => $text). This means that
+		# the markup style has to be removed from the widget. Now the widget will
+		# rendered in plain text without any styles.
 		delete $self->{attributes};
 	}
 
@@ -300,13 +303,15 @@ Parameters:
 
 =item * $markup
 
-The new markup that's been applied. This field is a normal Perl string.
+The new markup that's been applied. This field is a normal Perl string. If
+C<$markup> is C<undef> then the markup was removed.
 
 =back	
 
 =head1 SEE ALSO
 
-Take a look at the examples for getting some ideas or inspiration.
+Take a look at the examples for getting some ideas or inspiration. For a more
+powerful text widget take a look at L<Gtk2::TextView>.
 
 =head1 AUTHORS
 
