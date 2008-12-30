@@ -16,7 +16,7 @@ sub main {
 	my $window = Gtk2::Window->new();
 	my $entry = Gtk2::Ex::Entry::Pango->new();
 
-	my $markup = Gtk2::Ex::Entry::Pango->new();
+	my $markup = Gtk2::Entry->new();
 	
 	my $button_print = Gtk2::Button->new('Print');
 	my $button_markup = Gtk2::Button->new('Markup');
@@ -58,6 +58,7 @@ sub main {
 	});
 
 
+	# Apply the user's Pango text
 	$button_apply->signal_connect(clicked => sub {
 		$markup->signal_emit('activate');
 	});
