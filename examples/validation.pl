@@ -51,14 +51,12 @@ sub main {
 #
 sub on_change {
 	my ($widget) = @_;
-warn "\n$widget Changed called";
 
 	my $string = $widget->get_text;
 
 	# Validate the entry's text (accepting only letters)
 	$string =~ s/([^a-z]+)/apply_pango_makup($1)/egi;
 
-warn "$widget Markup $string";	
 	$widget->set_markup($string);
 }
 

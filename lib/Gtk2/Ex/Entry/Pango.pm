@@ -77,7 +77,6 @@ use Gtk2;
 use Carp;
 use Data::Dumper;
 
-our $DEBUG = 1;
 our $VERSION = '0.01';
 
 # See http://gtk2-perl.sourceforge.net/doc/pod/Glib/Object/Subclass.html
@@ -140,12 +139,9 @@ sub SET_PROPERTY {
 	my ($self, $pspec, $value) = @_;
 	
 	my $field = $pspec->get_name;
-warn ">>>>>>>>> $field = $value";
 	$self->{$field} = $value;
 
 	if ($field eq 'markup') {
-		# The widget doesn't need to keep the value of the markup, just to parse it
-		warn "$self Generic set $field = $value" if $DEBUG;
 		$self->_set_markup($value, 1);
 	}
 }
@@ -182,7 +178,6 @@ You might want to use the following code snippet for escaping the characters:
 sub set_markup {
 	my $self = shift;
 	my ($markup) = @_;
-	warn "$self Called set_markup($markup)" if $DEBUG;
 	$self->set(markup => $markup);
 }
 
@@ -208,19 +203,14 @@ sub _set_markup {
 		($attributes, $text) = Gtk2::Pango->parse_markup($pango);
 	};
 	if ($@) {
-		warn "$self Failed to parse the markup $markup because $@" if $DEBUG;
+		warn "$self Failed to parse the markup $markup because $@";
 		croak $@;	
 	}
 
 	# Change the internal text (we tell our selves that we are doing it)
-#	$self->signal_stop_emission_by_name('changed');
 	if ($set_text) {
-warn "========== Setting internal change to 1";
 		$self->set('internal-change' => 1);
-		warn "$self Setting the Gtk2::Text to $text" if $DEBUG;
 		$self->set_text($text);
-#		$self->set('internal-change' => 0);
-		warn "--------------returned from set_text";
 	}
 
 	# The text region must be invalidate in order to be repainted. This is true
@@ -250,7 +240,6 @@ sub callback_changed {
 	my $self = shift;
 
 	my $internal_change = $self->get('internal-change');
-warn "========$self Changed called is internal change? ", $internal_change ? 'TRUE' : 'FALSE' if $DEBUG;
 
 	if (! $internal_change) {
 		# The text was changed as if it was a normal Gtk2::Entry either through
@@ -259,10 +248,7 @@ warn "========$self Changed called is internal change? ", $internal_change ? 'TR
 		# rendered in plain text without any styles.
 		#$self->set_attributes(undef);		
 		#delete $self->{attributes};
-		warn "Erasing markup";
-#		$self->set('internal-change' => 0);
 		$self->{markup} = undef;
-warn "===========MARKUP is removed";
 		if ($self->realized) {
 			my $size = $self->allocation;
 			my $rectangle = Gtk2::Gdk::Rectangle->new(0, 0, $size->width, $size->height);
@@ -300,17 +286,12 @@ sub callback_expose_event {
 	# To solve this problem the new text has to be added to the entry and the
 	# style has to be applied afterwards.
 	#
-	warn "$self Expose event using pango? ", $self->{markup} ? 'YES' : 'NO' if $DEBUG;
-#	if (my $attributes = $self->get_attributes) {
-#		$self->get_layout->set_attributes($attributes);
-#	}
 
-if ($self->{markup}) {
-	my ($attributes, $text) = Gtk2::Pango->parse_markup($self->{markup});
-	warn "setting layout attributes";
-	$self->set_text($text);
-	$self->get_layout->set_attributes($attributes);
-}
+	if ($self->{markup}) {
+		my ($attributes, $text) = Gtk2::Pango->parse_markup($self->{markup});
+		$self->set_text($text);
+		$self->get_layout->set_attributes($attributes);
+	}
 
 	$self->signal_chain_from_overridden(@_);
 }
