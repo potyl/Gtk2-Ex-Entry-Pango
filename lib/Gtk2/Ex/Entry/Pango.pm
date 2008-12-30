@@ -163,8 +163,24 @@ sub _set_markup {
 
 	# Change the internal text but tell our selves that we are doing it	
 	local $self->{internal_change} = 1;
+printf "Changing text from '%s'\n", $self->get_text;
+printf "Changing text to   '%s'\n", $text;
 	$self->set_text($text);
 
+	# The text region must be invalidate in order to be repainted. This is true
+	# even if the same text is the same. Remember that the text in the Pango
+	# markup could turn out to be the same text that was previously in the widget
+	# but with new styles (this is most common when showing an error with a red
+	# underline). In such a case the Gtk2::Entry will not refresh it's appearance
+	# because the text didn't change. Here we are forcing the update.
+	if ($self->realized) {
+print "Invalidating region\n";
+		my $size = $self->allocation;
+		my $rectangle = Gtk2::Gdk::Rectangle->new(0, 0, $size->width, $size->height);
+		$self->window->invalidate_rect($rectangle, TRUE);
+	}
+
+	# Remember the Pango attributes (the markup styles to apply)
 	$self->{attributes} = $attributes;
 }
 
@@ -177,12 +193,11 @@ sub _set_markup {
 #
 sub callback_changed {
 	my $self = shift;
-
+print "Entry $self text changed\n";
 	if (! $self->{internal_change}) {
 		# The text was changed as if it was a normal Gtk2::Entry through set_text()
 		# or set(text => $text). This means that we have to remove the markup code.
 		# Now the widget will render a plain text string.
-		delete $self->{markup};
 		delete $self->{attributes};
 	}
 
@@ -213,9 +228,8 @@ sub callback_expose_event {
 sub apply_markup {
 	my $self = shift;
 
-	my $markup = $self->{markup};
-	return FALSE unless defined $markup;
-	$self->debug();
+	my $attributes = $self->{attributes};
+	return FALSE unless defined $attributes;
 	
 	# Calling $self->get_layout->set_markup($markup); is not enough. For instance,
 	# if the text within the markup differs from the actual text in the
@@ -229,15 +243,8 @@ sub apply_markup {
 	# To solve this problem the new text has to be added to the entry and the
 	# style has to be applied afterwards.
 	#
-
-#	# FIXME parse the markup is the setter. Catch the exception there.
-#	my ($attributes, $text) = Gtk2::Pango->parse_markup($markup);
-
-#	local $self->{internal_change} = 1;
-#	$self->set_text($text);
-	$self->get_layout->set_attributes($self->{attributes});
+	$self->get_layout->set_attributes($attributes);
 	
-	#$self->get_layout->set_markup($markup);
 	return TRUE;
 }
 
