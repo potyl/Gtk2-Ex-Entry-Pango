@@ -14,9 +14,9 @@ exit main();
 sub main {
 
 	my $window = Gtk2::Window->new();
-	my $entry = Gtk2::Ex::Entry::Pango->new();
 
 	my $markup = Gtk2::Entry->new();
+	my $entry = Gtk2::Ex::Entry::Pango->new();
 	
 	my $button_markup = Gtk2::Button->new('Markup');
 	my $button_apply = Gtk2::Button->new('Aply');
@@ -29,16 +29,16 @@ sub main {
 	$hbox_bottom->pack_start($markup, TRUE, TRUE, 0);
 	$hbox_bottom->pack_start($button_apply, FALSE, FALSE, 0);
 
-
 	my $vbox = new Gtk2::VBox(FALSE, 0);
 	$vbox->pack_start($hbox_top,    TRUE, TRUE, 0);
 	$vbox->pack_start($hbox_bottom, TRUE, TRUE, 0);
 
+	$window->set_focus_child($markup);
 	$window->add($vbox);
 	
 	# Use pango markup
 	$entry->set_markup(
-		'<span style="italic">Pango markup</span> is <span underline="error" underline_color="red">NOT</span> hard'
+		'<span style="italic">Pango</span> <b>markup</b> is <span underline="error" underline_color="red">NOT</span> hard'
 	);
 	
 
