@@ -83,7 +83,7 @@ use Glib::Object::Subclass 'Gtk2::Entry' =>
 		Glib::ParamSpec->string(
 			'markup',
 			'markup',
-			'The Pango markup used for displaying the contents of entry.',
+			'The Pango markup used for displaying the contents of the entry.',
 			'',
 			Glib::G_PARAM_READWRITE
 		),
@@ -95,7 +95,10 @@ use Glib::Object::Subclass 'Gtk2::Entry' =>
 =head2 set_markup
 
 Sets the text of the entry .
-Parses str which is marked up with the Pango text markup language, setting the label's text and attribute list based on the parse results. If the str is external data, you may need to escape it with g_markup_escape_text() or g_markup_printf_escaped(): 
+Parses str which is marked up with the Pango text markup language, setting the
+label's text and attribute list based on the parse results. If the string has
+external data, you may need to escape it with g_markup_escape_text() or 
+g_markup_printf_escaped(): 
 
 Parameters:
 
@@ -131,22 +134,12 @@ sub SET_PROPERTY {
 	my ($self, $pspec, $newval) = @_;
 	
 	my $field = $pspec->get_name;
-	my $oldval = $self->{$field} || '';
-printf "Setting %s = %s\n", $field, $newval;
-	$self->{$field} = $newval;  # per default GET_PROPERTY
+	$self->{$field} = $newval;
 
 	if ($field eq 'markup') {
-print "Changed field markup\n";
-		#  Tell the callback_changed event that the text was changed
-		$self->{changed} = 1;
-print "Calling changed\n";
-#		$self->signal_emit('changed');
 		$self->apply_markup();
-print "Called changed\n";
 	}
-	else {
-		delete $self->{changed};
-	}
+
 #	if ($oldval ne $newval) {
 #		$self->set_text($newval);
 #	}
@@ -157,29 +150,22 @@ print "Called changed\n";
 sub callback_changed {
 	my $self = shift;
 
-printf "Callback changed called (changed? %s)\n", $self->{changed} ? 'TRUE' : 'FALSE';
-	if ($self->{changed}) {
-		$self->apply_markup();
-	}
-	else {
-		# The text was changed without using markup, this means that
-		# $self->set_text() was called.
+	if (! $self->{internal_change}) {
+		# The text was changed as if it was a normal Gtk2::Entry through set_text()
+		# or set(text => $text). This means that we have to remove the markup code.
+		# Now the widget will render a plain text string.
 		delete $self->{markup};
-	}
-	delete $self->{changed};
-
-	
-	if ($self->realized) {
-		my $size = $self->allocation;
-		my $rectangle = Gtk2::Gdk::Rectangle->new(0, 0, $size->width, $size->height);
-		$self->window->invalidate_rect($rectangle, TRUE);
 	}
 
 	$self->signal_chain_from_overridden(@_);
 }
 
 
-
+#
+# Called each time that the widget needs to be rendered. This happens quite
+# often as the cursor is blinking. Without this callback the Pango style would
+# be lost randonly.
+#
 sub callback_expose_event {
 	my $self = shift;
 	my ($event) = @_;
@@ -200,19 +186,25 @@ sub apply_markup {
 	return FALSE unless defined $markup;
 	$self->debug();
 	
-	# FIXME this doesn't seem to be enough. The problem is that if the markup
-	#       changes the width of the string there will be big problems. The string
-	#       will be rendered properly but the entry will not have the right data!
-	
-	#       Instead try to do $self->set_text($text) and $self->layout->set_attributes().
-	#       Use the following function: ($attr_list, $text, $accel_char) = Gtk2::Pango->parse_markup ($markup_text, $accel_marker)
-	#       See: http://gtk2-perl.sourceforge.net/doc/pod/Gtk2/Pango/AttrList.html#_attr_list_text_acce
-	
+	# Calling $self->get_layout->set_markup($markup); is not enough. For instance,
+	# if the text within the markup differs from the actual text in the
+	# Gtk2::Entry and changes in width there will be some problems. Sure the
+	# entry's text will be rendered properly but the entry will not have the right
+	# data within it's buffer. This means that $self->get_text() will still return
+	# the old text even though the widget displays the new string. Furthermore,
+	# the widget will fail to edit text because the cursor could be placed at a
+	# position that's further than the actual data in the widget.
+	#
+	# To solve this problem the new text has to be added to the entry and the
+	# style has to be applied afterwards.
+	#
+
+	# FIXME parse the markup is the setter. Catch the exception there.
 	my ($attributes, $text) = Gtk2::Pango->parse_markup($markup);
-#printf "Layout is %s\n", $self->get_layout;
+
+	local $self->{internal_change} = 1;
 	$self->set_text($text);
 	$self->get_layout->set_attributes($attributes);
-	
 	
 	#$self->get_layout->set_markup($markup);
 	return TRUE;
