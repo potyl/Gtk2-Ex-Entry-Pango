@@ -67,6 +67,7 @@ use warnings;
 
 use Glib qw(TRUE FALSE);
 use Gtk2;
+use Carp;
 use Data::Dumper;
 
 our $VERSION = '0.01';
@@ -85,7 +86,7 @@ use Glib::Object::Subclass 'Gtk2::Entry' =>
 			'markup',
 			'The Pango markup used for displaying the contents of the entry.',
 			'',
-			Glib::G_PARAM_READWRITE
+			[qw(writable)],
 		),
 	],
 ;
@@ -130,23 +131,50 @@ sub set_markup {
 }
 
 
+
 sub SET_PROPERTY {
-	my ($self, $pspec, $newval) = @_;
+	my ($self, $pspec, $value) = @_;
 	
 	my $field = $pspec->get_name;
-	$self->{$field} = $newval;
+	$self->{$field} = $value;
 
 	if ($field eq 'markup') {
-		$self->apply_markup();
+		$self->_set_markup($value);
 	}
-
-#	if ($oldval ne $newval) {
-#		$self->set_text($newval);
-#	}
 }
 
 
 
+#
+# The actual setter. The markup string parsed and it's parts are stored.
+#
+sub _set_markup {
+	my $self = shift;
+	my ($markup) = @_;
+
+	my ($attributes, $text);
+	eval {
+		($attributes, $text) = Gtk2::Pango->parse_markup($markup);
+	};
+	if ($@) {
+		warn "Failed to parse the markup $markup because $@";
+		croak $@;	
+	}
+
+	# Change the internal text but tell our selves that we are doing it	
+	local $self->{internal_change} = 1;
+	$self->set_text($text);
+
+	$self->{attributes} = $attributes;
+}
+
+
+
+#
+# Called when the text of the entry is changed. The callback is used for monitor
+# when the user resets the text of the widget without markup. In that case we
+# need to erase the markup.
+#
 sub callback_changed {
 	my $self = shift;
 
@@ -155,16 +183,18 @@ sub callback_changed {
 		# or set(text => $text). This means that we have to remove the markup code.
 		# Now the widget will render a plain text string.
 		delete $self->{markup};
+		delete $self->{attributes};
 	}
 
 	$self->signal_chain_from_overridden(@_);
 }
 
 
+
 #
 # Called each time that the widget needs to be rendered. This happens quite
 # often as the cursor is blinking. Without this callback the Pango style would
-# be lost randonly.
+# be lost randomly.
 #
 sub callback_expose_event {
 	my $self = shift;
@@ -173,6 +203,7 @@ sub callback_expose_event {
 	$self->apply_markup();
 	$self->signal_chain_from_overridden(@_);
 }
+
 
 
 #
@@ -199,22 +230,23 @@ sub apply_markup {
 	# style has to be applied afterwards.
 	#
 
-	# FIXME parse the markup is the setter. Catch the exception there.
-	my ($attributes, $text) = Gtk2::Pango->parse_markup($markup);
+#	# FIXME parse the markup is the setter. Catch the exception there.
+#	my ($attributes, $text) = Gtk2::Pango->parse_markup($markup);
 
-	local $self->{internal_change} = 1;
-	$self->set_text($text);
-	$self->get_layout->set_attributes($attributes);
+#	local $self->{internal_change} = 1;
+#	$self->set_text($text);
+	$self->get_layout->set_attributes($self->{attributes});
 	
 	#$self->get_layout->set_markup($markup);
 	return TRUE;
 }
 
 
+
 sub debug {
 	my $self = shift;
 
-	my $markup = $self->get('markup');
+	my $markup = $self->{markup};
 	printf "Markup is %s\n", defined $markup ? "'$markup'" : "undef";
 	printf "Text   is '%s'\n", $self->get_text;
 	print "\n";
