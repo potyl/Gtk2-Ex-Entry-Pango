@@ -76,8 +76,13 @@ our $VERSION = '0.01';
 use Glib::Object::Subclass 'Gtk2::Entry' =>
 
 	signals => {
-		changed      => \&callback_changed,
-		expose_event => \&callback_expose_event,
+		'changed'        => \&callback_changed,
+		'expose-event'   => \&callback_expose_event,
+
+		'markup-changed' => {
+			flags => ['run-last'],
+			param_types => ['Glib::String'],
+		}
 	},
 
 	properties => [
@@ -86,10 +91,44 @@ use Glib::Object::Subclass 'Gtk2::Entry' =>
 			'markup',
 			'The Pango markup used for displaying the contents of the entry.',
 			'',
-			[qw(writable)],
+			['writable'],
 		),
 	],
 ;
+
+
+#
+# Gtk2 constructor.
+#
+sub INIT_INSTANCE {
+	my $self = shift;
+
+	# The Pango attributes to apply to the text. If set to undef then there are no
+	# attributes and the text is rendered normally.
+	$self->{attributes} = undef;
+
+	# The actual markup string to render. This field is not needed at all and
+	# could be removed in the future.
+	$self->{markup} = undef;
+}
+
+
+#
+# Gtk2 generic property setter.
+#
+sub SET_PROPERTY {
+	my ($self, $pspec, $value) = @_;
+	
+	my $field = $pspec->get_name;
+	$self->{$field} = $value;
+
+	if ($field eq 'markup') {
+		$self->_set_markup($value);
+	}
+	elsif ($field eq 'attributes') {
+		print "Setting attributes\n";	
+	}
+}
 
 
 
@@ -107,17 +146,17 @@ Parameters:
 
 =item * $markup
 
-The text to add to the entry, the text is expecte to be using Pango markup. This
-means that even if no markup is used special characters like 'E<lt>','E<gt>' and
+The text to add to the entry, the text is expected to be using Pango markup.
+This means that even if no markup is used special characters like E<lt>, E<gt>,
 &, ' and " need to be escaped. Keep in mind that Pango markup is a subset of
 XML.
 
-You might want to use the following code snipet for escaping the characters:
+You might want to use the following code snippet for escaping the characters:
 
 	use Glib::Markup qw(escape_text);
 	$entry->set_markup(
-		sprintf "The <i>%s</i> <b>%s</b> fox <sup>jumps</sup> over the lazy dog",
-			map { escape_text($_) } ('quick', 'brown')
+		sprintf "The <i>%s</i> <b>%s</b> fox <sup>%s</sup> over the lazy dog",
+			map { escape_text($_) } ('quick', 'brown', 'jumps')
 	);
 
 =back	
@@ -132,21 +171,12 @@ sub set_markup {
 
 
 
-sub SET_PROPERTY {
-	my ($self, $pspec, $value) = @_;
-	
-	my $field = $pspec->get_name;
-	$self->{$field} = $value;
-
-	if ($field eq 'markup') {
-		$self->_set_markup($value);
-	}
-}
-
-
-
 #
-# The actual setter. The markup string parsed and it's parts are stored.
+# The actual setter for the property 'markup'. The markup string is parsed into
+# a text to be displayed an attribute list (the styles to apply). The text is
+# added normally to the widget as if it was a Gtk2::Entry, while the attributes
+# are stored in order to be latter applied each time that the widget is
+# rendered.
 #
 sub _set_markup {
 	my $self = shift;
@@ -161,10 +191,8 @@ sub _set_markup {
 		croak $@;	
 	}
 
-	# Change the internal text but tell our selves that we are doing it	
+	# Change the internal text (we tell our selves that we are doing it)
 	local $self->{internal_change} = 1;
-printf "Changing text from '%s'\n", $self->get_text;
-printf "Changing text to   '%s'\n", $text;
 	$self->set_text($text);
 
 	# The text region must be invalidate in order to be repainted. This is true
@@ -174,7 +202,6 @@ printf "Changing text to   '%s'\n", $text;
 	# underline). In such a case the Gtk2::Entry will not refresh it's appearance
 	# because the text didn't change. Here we are forcing the update.
 	if ($self->realized) {
-print "Invalidating region\n";
 		my $size = $self->allocation;
 		my $rectangle = Gtk2::Gdk::Rectangle->new(0, 0, $size->width, $size->height);
 		$self->window->invalidate_rect($rectangle, TRUE);
@@ -182,6 +209,9 @@ print "Invalidating region\n";
 
 	# Remember the Pango attributes (the markup styles to apply)
 	$self->{attributes} = $attributes;
+
+	# Tell the others that the markup has changed	
+	$self->signal_emit('markup-changed'=> $markup);
 }
 
 
@@ -193,11 +223,12 @@ print "Invalidating region\n";
 #
 sub callback_changed {
 	my $self = shift;
-print "Entry $self text changed\n";
+
 	if (! $self->{internal_change}) {
 		# The text was changed as if it was a normal Gtk2::Entry through set_text()
 		# or set(text => $text). This means that we have to remove the markup code.
 		# Now the widget will render a plain text string.
+		$self->set_markup(undef);
 		delete $self->{attributes};
 	}
 
@@ -215,22 +246,6 @@ sub callback_expose_event {
 	my $self = shift;
 	my ($event) = @_;
 	
-	$self->apply_markup();
-	$self->signal_chain_from_overridden(@_);
-}
-
-
-
-#
-# Applies the Pango markup if a markup was set. Returns TRUE if the markup was
-# applied FALSE otherwise.
-#
-sub apply_markup {
-	my $self = shift;
-
-	my $attributes = $self->{attributes};
-	return FALSE unless defined $attributes;
-	
 	# Calling $self->get_layout->set_markup($markup); is not enough. For instance,
 	# if the text within the markup differs from the actual text in the
 	# Gtk2::Entry and changes in width there will be some problems. Sure the
@@ -243,21 +258,13 @@ sub apply_markup {
 	# To solve this problem the new text has to be added to the entry and the
 	# style has to be applied afterwards.
 	#
-	$self->get_layout->set_attributes($attributes);
-	
-	return TRUE;
+	if (my $attributes = $self->{attributes}) {
+		$self->get_layout->set_attributes($attributes);
+	}
+
+	$self->signal_chain_from_overridden(@_);
 }
 
-
-
-sub debug {
-	my $self = shift;
-
-	my $markup = $self->{markup};
-	printf "Markup is %s\n", defined $markup ? "'$markup'" : "undef";
-	printf "Text   is '%s'\n", $self->get_text;
-	print "\n";
-}
 
 
 # Return a true value
@@ -269,9 +276,37 @@ The following properties are added by this widget:
 
 =head2 markup
 
-The markup text used by this widget.
+(string: writable)
 
-(string : readable / writable / private)
+The markup text used by this widget. This property is a string that's only
+writable. That's right there's no way for extracting the markup from the widget.
+
+=head1 SIGNALS
+
+=head2 markup-changed
+
+Emitted when the markup has been changed.
+
+Signature:
+
+	sub markup_changed {
+		my ($widget, $markup) = @_;
+		# Returns nothing
+	}
+
+Parameters:
+
+=over
+
+=item * $markup
+
+The new markup that's been applied. This field is a normal Perl string.
+
+=back	
+
+=head1 SEE ALSO
+
+Take a look at the examples for getting some ideas or inspiration.
 
 =head1 AUTHORS
 
