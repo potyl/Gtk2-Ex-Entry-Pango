@@ -18,13 +18,11 @@ sub main {
 
 	my $markup = Gtk2::Entry->new();
 	
-	my $button_print = Gtk2::Button->new('Print');
 	my $button_markup = Gtk2::Button->new('Markup');
 	my $button_apply = Gtk2::Button->new('Aply');
 	
 	my $hbox_top = new Gtk2::HBox(FALSE, 0);
 	$hbox_top->pack_start($entry, TRUE, TRUE, 0);
-	$hbox_top->pack_start($button_print, FALSE, FALSE, 0);
 	$hbox_top->pack_start($button_markup, FALSE, FALSE, 0);
 	
 	my $hbox_bottom = new Gtk2::HBox(FALSE, 0);
@@ -46,10 +44,6 @@ sub main {
 
 	# Connect the signals
 	$window->signal_connect(delete_event => sub { Gtk2->main_quit(); });
-
-	$button_print->signal_connect(clicked => sub {
-		$entry->debug();
-	});
 
 	$button_markup->signal_connect(clicked => sub {
 		$entry->set(
