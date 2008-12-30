@@ -108,28 +108,9 @@ use Glib::Object::Subclass 'Gtk2::Entry' =>
 			'',
 			['readable', 'writable'],
 		),
-
-#		Glib::ParamSpec->boxed(
-#			'attributes',
-#			'attributes',
-#			'The Pango markup attributes (rendering styles) to apply to the text.',
-#			'Gtk2::Pango::AttrList',
-#			['readable', 'writable'],
-#		),
 	],
 ;
 
-
-#
-# Gtk2 constructor.
-#
-sub INIT_INSTANCE {
-	my $self = shift;
-
-	# The Pango attributes to apply to the text. If set to undef then there are no
-	# attributes and the text is rendered normally.
-	#$self->{attributes} = undef;
-}
 
 
 #
@@ -142,7 +123,7 @@ sub SET_PROPERTY {
 	$self->{$field} = $value;
 
 	if ($field eq 'markup') {
-		$self->_set_markup($value, 1);
+		$self->_set_markup($value);
 	}
 }
 
@@ -196,7 +177,9 @@ sub _set_markup {
 	my $self = shift;
 	my ($markup, $set_text) = @_;
 
-	# Parse the markup, this will die if the markup is invalid
+	# Parse the markup, this will die if the markup is invalid. It's better to
+	# to let the caller know if there was an error than to wait until the
+	# callbacks reparse the markup
 	my ($attributes, $text);
 	eval {
 		my $pango = defined $markup ? $markup : '';
@@ -207,13 +190,23 @@ sub _set_markup {
 		croak $@;	
 	}
 
-	# Change the internal text (we tell our selves that we are doing it)
-	if ($set_text) {
-		$self->set('internal-change' => 1);
-		$self->set_text($text);
-	}
+	# Change the internal text (remember that this is our change)
+	$self->set('internal-change' => 1);
+	$self->set_text($text);
+	
+	$self->markup_notify($markup);
+}
 
-	# The text region must be invalidate in order to be repainted. This is true
+
+#
+# Notifies the others that the markup has changed. This means that a redraw has
+# to be rescheduled and that the signal 'markup-changed' has to be emitted.
+#
+sub markup_notify {
+	my $self = shift;
+	my ($markup) = @_;
+
+	# The text region must be invalidated in order to be repainted. This is true
 	# even if the same text is the same. Remember that the text in the Pango
 	# markup could turn out to be the same text that was previously in the widget
 	# but with new styles (this is most common when showing an error with a red
@@ -230,7 +223,6 @@ sub _set_markup {
 }
 
 
-
 #
 # Called when the text of the entry is changed. The callback is used for monitor
 # when the user resets the text of the widget without markup. In that case we
@@ -239,26 +231,17 @@ sub _set_markup {
 sub callback_changed {
 	my $self = shift;
 
-	my $internal_change = $self->get('internal-change');
-
-	if (! $internal_change) {
+	if (! $self->get('internal-change')) {
 		# The text was changed as if it was a normal Gtk2::Entry either through
 		# $widget->set_text($text) or $widget->set(text => $text). This means that
 		# the markup style has to be removed from the widget. Now the widget will
 		# rendered in plain text without any styles.
-		#$self->set_attributes(undef);		
-		#delete $self->{attributes};
 		$self->{markup} = undef;
-		if ($self->realized) {
-			my $size = $self->allocation;
-			my $rectangle = Gtk2::Gdk::Rectangle->new(0, 0, $size->width, $size->height);
-			$self->window->invalidate_rect($rectangle, TRUE);
-		}
-
-		# Tell the others that the markup has changed	
-		$self->signal_emit('markup-changed'=> undef);
+		$self->markup_notify(undef);
 	}
-	$self->set('internal-change' => 0);
+	else {
+		$self->set('internal-change' => 0);
+	}
 
 	$self->signal_chain_from_overridden(@_);
 }
