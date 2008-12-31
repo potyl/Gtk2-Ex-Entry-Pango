@@ -45,7 +45,8 @@ sub main {
 	
 	# Use pango markup
 	$entry->set_markup(
-		'<span style="italic">Pango</span> <b>markup</b> is <span underline="error" underline_color="red">NOT</span> hard'
+#		'<span style="italic">Pango</span> <b>markup</b> is <span underline="error" underline_color="red">NOT</span> hard'
+		'<b>Pan</b><i>go</i>'
 	);
 	
 
@@ -67,18 +68,25 @@ sub main {
 		$entry->set_markup($markup->get_text);
 	});
 
+	my $format = "========= %-10s =========\n";
 	$button_text1->signal_connect(clicked => sub {
 		print "\n" x 3;
+		printf $format => 'set_markup';
+		warn ">>>>internal-change = ", $entry->get('internal-change') ? 'TRUE' : 'FALSE';	
 		$entry->set_markup('sm<b>aller</b> text');
 	});
 
 	$button_text2->signal_connect(clicked => sub {
 		print "\n" x 3;
+		printf $format => 'set_markup';
+		warn ">>>>internal-change = ", $entry->get('internal-change') ? 'TRUE' : 'FALSE';	
 		$entry->set_markup('s<b>maller</b> text');
 	});
 
 	$button_text3->signal_connect(clicked => sub {
 		print "\n" x 3;
+		printf $format => 'set_text';
+		warn ">>>>internal-change = ", $entry->get('internal-change') ? 'TRUE' : 'FALSE';	
 		$entry->set_text('smaOOOOller text');
 	});
 
