@@ -107,7 +107,7 @@ use Glib::Object::Subclass 'Gtk2::Entry' =>
 			'internal-change',
 			'Tells the changed callback if the text was changed by this widget.',
 			FALSE,
-			['readable', 'writable', 'private'],
+			['readable', 'writable'],
 		),
 	],
 ;
@@ -170,6 +170,7 @@ You might want to use the following code snippet for escaping the characters:
 sub set_markup {
 	my $self = shift;
 	my ($markup) = @_;
+warn "set_markup('$markup')";
 	$self->set(markup => $markup);
 }
 
@@ -183,7 +184,7 @@ sub set_markup {
 #
 sub apply_markup {
 	my $self = shift;
-	my ($markup, $set_text) = @_;
+	my ($markup) = @_;
 
 	# Parse the markup, this will die if the markup is invalid. It's better to
 	# to let the caller know if there was an error than to wait until the
@@ -199,7 +200,8 @@ sub apply_markup {
 	}
 
 	# Change the internal text (remember that this is our change)
-	$self->{'internal-change'} = TRUE;
+	$self->set('internal-change', TRUE);
+	warn "==apply_markup($markup) calling set_text($text)";
 	$self->set_text($text);
 	
 	$self->markup_notify(TRUE);
@@ -224,7 +226,9 @@ sub markup_notify {
 	if ($self->realized) {
 		my $size = $self->allocation;
 		my $rectangle = Gtk2::Gdk::Rectangle->new(0, 0, $size->width, $size->height);
+warn "markup_notify($changed) revalidating region (0, 0, ", $size->width, ", ", $size->height, ")";
 		$self->window->invalidate_rect($rectangle, TRUE);
+		$self->window->process_updates(TRUE);
 	}
 
 	# Tell the others that the markup has changed	
@@ -242,19 +246,21 @@ sub markup_notify {
 #
 sub callback_changed {
 	my $self = shift;
-
+	
 	my $changed = FALSE;
-	if (! $self->{'internal-change'}) {
+	if (! $self->get('internal-change')) {
 		# The text was changed as if it was a normal Gtk2::Entry either through
 		# $widget->set_text($text) or $widget->set(text => $text). This means that
 		# the markup style has to be removed from the widget. Now the widget will
 		# rendered in plain text without any styles.
 		my $changed = TRUE;
+		warn "==== removing markup";
 		$self->{markup} = undef;
 	}
 	else {
-		$self->{'internal-change'} = FALSE;
+		$self->set('internal-change', FALSE);
 	}
+	warn "callback_changed() text is '", $self->get_text, "', changed is $changed";
 
 	$self->markup_notify($changed);
 
@@ -288,6 +294,7 @@ sub callback_expose_event {
 	my $markup = $self->{markup};
 	if ($markup) {
 		my ($attributes, $text) = Gtk2::Pango->parse_markup($markup);
+		warn "callback_expose_event() setting attributes for '$markup'";
 		$self->get_layout->set_attributes($attributes);
 	}
 
