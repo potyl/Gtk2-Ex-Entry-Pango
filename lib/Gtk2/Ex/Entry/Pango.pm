@@ -99,18 +99,28 @@ use Glib::Object::Subclass 'Gtk2::Entry' =>
 			'markup',
 			'The Pango markup used for displaying the contents of the entry.',
 			'',
-			['readable', 'writable'],
+			['writable'],
 		),
 
 		Glib::ParamSpec->boolean(
 			'internal-change',
 			'internal-change',
 			'Tells the changed callback if the text was changed by this widget.',
-			'',
-			['readable', 'writable'],
+			FALSE,
+			['readable', 'writable', 'private'],
 		),
 	],
 ;
+
+
+
+
+#
+# Gtk2 constructor.
+#
+#sub INIT_INSTANCE {
+#	my $self = shift;
+#}
 
 
 
@@ -164,6 +174,7 @@ sub set_markup {
 }
 
 
+
 #
 # Applies the markup to the widget. The markup string is parsed into a text to
 # be displayed and an attribute list (the styles to apply). The text is added
@@ -188,11 +199,12 @@ sub apply_markup {
 	}
 
 	# Change the internal text (remember that this is our change)
-	$self->set('internal-change' => 1);
+	$self->{'internal-change'} = TRUE;
 	$self->set_text($text);
 	
-	$self->markup_notify($markup);
+	$self->markup_notify(TRUE);
 }
+
 
 
 #
@@ -201,7 +213,7 @@ sub apply_markup {
 #
 sub markup_notify {
 	my $self = shift;
-	my ($markup) = @_;
+	my ($changed) = @_;
 
 	# The text region must be invalidated in order to be repainted. This is true
 	# even if the same text is the same. Remember that the text in the Pango
@@ -216,8 +228,11 @@ sub markup_notify {
 	}
 
 	# Tell the others that the markup has changed	
-	$self->signal_emit('markup-changed'=> $markup);
+	if ($changed) {
+		$self->signal_emit('markup-changed'=> $self->{markup});
+	}
 }
+
 
 
 #
@@ -228,17 +243,20 @@ sub markup_notify {
 sub callback_changed {
 	my $self = shift;
 
-	if (! $self->get('internal-change')) {
+	my $changed = FALSE;
+	if (! $self->{'internal-change'}) {
 		# The text was changed as if it was a normal Gtk2::Entry either through
 		# $widget->set_text($text) or $widget->set(text => $text). This means that
 		# the markup style has to be removed from the widget. Now the widget will
 		# rendered in plain text without any styles.
+		my $changed = TRUE;
 		$self->{markup} = undef;
-		$self->markup_notify(undef);
 	}
 	else {
-		$self->set('internal-change' => 0);
+		$self->{'internal-change'} = FALSE;
 	}
+
+	$self->markup_notify($changed);
 
 	$self->signal_chain_from_overridden(@_);
 }
@@ -267,7 +285,7 @@ sub callback_expose_event {
 	# style has to be applied afterwards.
 	#
 
-	my $markup = $self->get('markup');
+	my $markup = $self->{markup};
 	if ($markup) {
 		my ($attributes, $text) = Gtk2::Pango->parse_markup($markup);
 		$self->get_layout->set_attributes($attributes);
