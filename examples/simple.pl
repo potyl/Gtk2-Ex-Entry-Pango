@@ -20,6 +20,10 @@ sub main {
 	
 	my $button_markup = Gtk2::Button->new('Markup');
 	my $button_apply = Gtk2::Button->new('Aply');
+
+	my $button_text1 = Gtk2::Button->new('Text1');
+	my $button_text2 = Gtk2::Button->new('Text2');
+	my $button_text3 = Gtk2::Button->new('Text3');
 	
 	my $hbox_top = new Gtk2::HBox(FALSE, 0);
 	$hbox_top->pack_start($entry, TRUE, TRUE, 0);
@@ -28,6 +32,9 @@ sub main {
 	my $hbox_bottom = new Gtk2::HBox(FALSE, 0);
 	$hbox_bottom->pack_start($markup, TRUE, TRUE, 0);
 	$hbox_bottom->pack_start($button_apply, FALSE, FALSE, 0);
+	$hbox_bottom->pack_start($button_text1, FALSE, FALSE, 0);
+	$hbox_bottom->pack_start($button_text2, FALSE, FALSE, 0);
+	$hbox_bottom->pack_start($button_text3, FALSE, FALSE, 0);
 
 	my $vbox = new Gtk2::VBox(FALSE, 0);
 	$vbox->pack_start($hbox_top,    TRUE, TRUE, 0);
@@ -58,6 +65,21 @@ sub main {
 	});
 	$markup->signal_connect(activate => sub {
 		$entry->set_markup($markup->get_text);
+	});
+
+	$button_text1->signal_connect(clicked => sub {
+		print "\n" x 3;
+		$entry->set_markup('sm<b>aller</b> text');
+	});
+
+	$button_text2->signal_connect(clicked => sub {
+		print "\n" x 3;
+		$entry->set_markup('s<b>maller</b> text');
+	});
+
+	$button_text3->signal_connect(clicked => sub {
+		print "\n" x 3;
+		$entry->set_text('smaOOOOller text');
 	});
 
 	
