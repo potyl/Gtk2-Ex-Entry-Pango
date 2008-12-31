@@ -190,47 +190,63 @@ sub apply_markup {
 	if ($text eq $self->get_text) {
 		# set_text() only changes the text if it's different, since this is the same
 		# text we can just apply the markup.
-	
+
 		# Apply the markup
 		warn "+++ callback_changed() Applying attributes";
 		$self->get_layout->set_attributes($attributes);
 		warn "+++ callback_changed() applied attributes";
-
+		
+		$self->request_redraw();
 	}
 	else {
 		# Change the internal text (remember that this is our change)
-		local $self->{internal} = 1;		
+		local $self->{internal} = TRUE;		
 		warn "1)! apply_markup() calling set(text => '$text')";
 		$self->set(text => $text);
+		
+		if ($self->{internal}) {
+			# The signal 'changed' wasn't emited
+			warn "+++ callback_changed() The signal 'changed' wasn't emited, forcing redraw";
+			$self->request_redraw();
+		}
 	}
 
-
-	$self->markup_notify();
+	$self->signal_emit_markup_changed();
 }
 
 
 
 #
-# Notifies the others that the markup has changed. This means that a redraw has
-# to be rescheduled and that the signal 'markup-changed' has to be emitted.
+# Schedules a redraw of the widget.
 #
-sub markup_notify {
+# The text region must be invalidated in order to be repainted. This is true
+# even if the markup text is the same as the one in the widget. Remember that
+# the text in the Pango markup could turn out to be the same text that was 
+# previously in the widget but with new styles (this is most common when showing
+# an error with a red underline). In such case the Gtk2::Entry will not refresh
+# it's appearance because the text didn't change. Here we are forcing the update.
+#
+sub request_redraw {
 	my $self = shift;
 
-	# The text region must be invalidated in order to be repainted. This is true
-	# even if the same text is the same. Remember that the text in the Pango
-	# markup could turn out to be the same text that was previously in the widget
-	# but with new styles (this is most common when showing an error with a red
-	# underline). In such a case the Gtk2::Entry will not refresh it's appearance
-	# because the text didn't change. Here we are forcing the update.
 	if ($self->realized) {
 		my $size = $self->allocation;
 		my $rectangle = Gtk2::Gdk::Rectangle->new(0, 0, $size->width, $size->height);
-		warn "    markup_notify() revalidating region (0, 0, ", $size->width, ", ", $size->height, ")";
+		Carp::carp "*   request_redraw() revalidating region (0, 0, ", $size->width, ", ", $size->height, ")";
 		$self->window->invalidate_rect($rectangle, TRUE);
 	}
+}
 
-	# Tell the others that the markup has changed	
+
+
+#
+# Notifies the others that the markup has changed by emitting the signal
+# 'markup-changed'.
+#
+sub signal_emit_markup_changed {
+	my $self = shift;
+	my $markup = defined $self->{markup} ? "'$self->{markup}'" : 'undef';
+	Carp::carp "=-  signal_emit_markup_changed() emitting signal 'markup-changed' => $markup";
 	$self->signal_emit('markup-changed'=> $self->{markup});
 }
 
@@ -252,6 +268,11 @@ sub callback_changed {
 		# the markup style has to be removed from the widget. Now the widget will
 		# rendered in plain text without any styles.
 		$self->{markup} = undef;
+		$self->signal_emit_markup_changed();
+	}
+	else {
+		# Tell us that the callback was called
+		$self->{internal} = FALSE;
 	}
 
 	
@@ -273,7 +294,7 @@ sub callback_changed {
 	$self->get_layout->set_attributes($attributes);
 
 
-	$self->markup_notify();
+	$self->request_redraw();
 	
 	return $self->signal_chain_from_overridden(@_);
 }
