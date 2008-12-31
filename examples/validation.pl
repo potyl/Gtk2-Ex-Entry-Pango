@@ -55,7 +55,6 @@ sub on_change {
 	print "\n" x 3;
 	my $format = "========= %-10s =========\n";
 	printf $format => 'on_change';
-	warn ">>> internal-change = ", $widget->get('internal-change') ? 'TRUE' : 'FALSE';	
 
 	my $string = $widget->get_text;
 

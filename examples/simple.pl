@@ -72,21 +72,18 @@ sub main {
 	$button_text1->signal_connect(clicked => sub {
 		print "\n" x 3;
 		printf $format => 'set_markup';
-		warn ">>>>internal-change = ", $entry->get('internal-change') ? 'TRUE' : 'FALSE';	
 		$entry->set_markup('sm<b>aller</b> text');
 	});
 
 	$button_text2->signal_connect(clicked => sub {
 		print "\n" x 3;
 		printf $format => 'set_markup';
-		warn ">>>>internal-change = ", $entry->get('internal-change') ? 'TRUE' : 'FALSE';	
 		$entry->set_markup('s<b>maller</b> text');
 	});
 
 	$button_text3->signal_connect(clicked => sub {
 		print "\n" x 3;
 		printf $format => 'set_text';
-		warn ">>>>internal-change = ", $entry->get('internal-change') ? 'TRUE' : 'FALSE';	
 		$entry->set_text('smaOOOOller text');
 	});
 
