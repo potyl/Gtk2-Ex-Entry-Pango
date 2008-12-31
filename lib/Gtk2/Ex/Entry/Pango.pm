@@ -105,14 +105,6 @@ use Glib::Object::Subclass 'Gtk2::Entry' =>
 			'',
 			['writable'],
 		),
-
-		Glib::ParamSpec->boolean(
-			'internal-change',
-			'internal-change',
-			'Tells the changed callback if the text was changed by this widget.',
-			FALSE,
-			['readable', 'writable'],
-		),
 	],
 ;
 
@@ -207,30 +199,13 @@ sub apply_markup {
 	}
 	else {
 		# Change the internal text (remember that this is our change)
-#		$self->set('internal-change', TRUE);
-#		warn "*** internal-change SET to ", $self->get('internal-change') ? 'TRUE' : 'FALSE';
 		local $self->{internal} = 1;		
-#		$self->set_text($text);
 		warn "1)! apply_markup() calling set(text => '$text')";
 		$self->set(text => $text);
-
-#		if ($self->get('internal-change')) {
-#			warn "#### apply_markup() set_text() wasn't called";
-#			$self->set('internal-change', FALSE);
-#			warn "*** internal-change SET to ", $self->get('internal-change') ? 'TRUE' : 'FALSE';
-#		}
 	}
 
-	if ($self->realized) {
-		warn "    apply_markup() request repaint";
-		my $size = $self->allocation;
-		my $rectangle = Gtk2::Gdk::Rectangle->new(0, 0, $size->width, $size->height);
-		$self->window->invalidate_rect($rectangle, TRUE);
-	}
 
-	# Tell the others that the markup has changed	
-	warn "    apply_markup() tell that markup has changed";
-	$self->signal_emit('markup-changed'=> $self->{markup});
+	$self->markup_notify();
 }
 
 
@@ -239,9 +214,8 @@ sub apply_markup {
 # Notifies the others that the markup has changed. This means that a redraw has
 # to be rescheduled and that the signal 'markup-changed' has to be emitted.
 #
-sub markup_notify_UNUSED {
+sub markup_notify {
 	my $self = shift;
-	my ($changed) = @_;
 
 	# The text region must be invalidated in order to be repainted. This is true
 	# even if the same text is the same. Remember that the text in the Pango
@@ -252,14 +226,12 @@ sub markup_notify_UNUSED {
 	if ($self->realized) {
 		my $size = $self->allocation;
 		my $rectangle = Gtk2::Gdk::Rectangle->new(0, 0, $size->width, $size->height);
-		warn "    markup_notify($changed) revalidating region (0, 0, ", $size->width, ", ", $size->height, ")";
+		warn "    markup_notify() revalidating region (0, 0, ", $size->width, ", ", $size->height, ")";
 		$self->window->invalidate_rect($rectangle, TRUE);
 	}
 
 	# Tell the others that the markup has changed	
-	if ($changed) {
-		$self->signal_emit('markup-changed'=> $self->{markup});
-	}
+	$self->signal_emit('markup-changed'=> $self->{markup});
 }
 
 
@@ -273,21 +245,12 @@ sub callback_changed {
 	my $self = shift;
 	warn "2)! callback_changed() text is '", $self->get_text, "'";
 
-#	my $changed = FALSE;
-#	if (! $self->get('internal-change')) {
-#		# The text was changed as if it was a normal Gtk2::Entry either through
-#		# $widget->set_text($text) or $widget->set(text => $text). This means that
-#		# the markup style has to be removed from the widget. Now the widget will
-#		# rendered in plain text without any styles.
-#		warn "=== callback_changed() removing markup";
-#		$self->{markup} = undef;
-#	}
-#	else {
-#		$self->set('internal-change', FALSE);
-#		warn "*** internal-change SET to ", $self->get('internal-change') ? 'TRUE' : 'FALSE';
-#	}
 
-	if (!$self->{internal}) {
+	if (! $self->{internal}) {
+		# The text was changed as if it was a normal Gtk2::Entry either through
+		# $widget->set_text($text) or $widget->set(text => $text). This means that
+		# the markup style has to be removed from the widget. Now the widget will
+		# rendered in plain text without any styles.
 		$self->{markup} = undef;
 	}
 
@@ -297,12 +260,11 @@ sub callback_changed {
 	my $attributes;
 	if (defined $markup) {
 		($attributes) = Gtk2::Pango->parse_markup($markup);
-		warn "    Attributes from $markup";
 	}
 	else {
 		# Remove the attributes
 		$attributes = Gtk2::Pango::AttrList->new();
-		warn "==> Attributes will erased";
+		warn "==> Attributes will be erased";
 	}
 
 
@@ -311,16 +273,8 @@ sub callback_changed {
 	$self->get_layout->set_attributes($attributes);
 
 
-	if ($self->realized) {
-		my $size = $self->allocation;
-		my $rectangle = Gtk2::Gdk::Rectangle->new(0, 0, $size->width, $size->height);
-		$self->window->invalidate_rect($rectangle, TRUE);
-	}
-
-
-#	$self->markup_notify($changed);
-	$self->signal_emit('markup-changed'=> $self->{markup});
-
+	$self->markup_notify();
+	
 	return $self->signal_chain_from_overridden(@_);
 }
 
