@@ -118,18 +118,6 @@ use Glib::Object::Subclass 'Gtk2::Entry' =>
 
 
 
-
-#
-# Gtk2 constructor.
-#
-sub INIT_INSTANCE {
-	my $self = shift;
-	
-	$self->signal_connect('notify::text' => \&callback_notify_text);
-}
-
-
-
 #
 # Gtk2 generic property setter.
 #
@@ -191,6 +179,7 @@ sub set_markup {
 sub apply_markup {
 	my $self = shift;
 	my ($markup) = @_;
+	warn "    apply_markup('$markup')";
 
 	# Parse the markup, this will die if the markup is invalid. It's better to
 	# to let the caller know if there was an error than to wait until the
@@ -211,33 +200,37 @@ sub apply_markup {
 		# text we can just apply the markup.
 	
 		# Apply the markup
-		warn "    callback_changed() Applying attributes";
+		warn "+++ callback_changed() Applying attributes";
 		$self->get_layout->set_attributes($attributes);
+		warn "+++ callback_changed() applied attributes";
 
-		if ($self->realized) {
-			my $size = $self->allocation;
-			my $rectangle = Gtk2::Gdk::Rectangle->new(0, 0, $size->width, $size->height);
-			$self->window->invalidate_rect($rectangle, TRUE);
-		}
 	}
 	else {
 		# Change the internal text (remember that this is our change)
-		$self->set('internal-change', TRUE);
-		warn "*** internal-change SET to ", $self->get('internal-change') ? 'TRUE' : 'FALSE';
-		
-		$self->set_text($text);
+#		$self->set('internal-change', TRUE);
+#		warn "*** internal-change SET to ", $self->get('internal-change') ? 'TRUE' : 'FALSE';
+		local $self->{internal} = 1;		
+#		$self->set_text($text);
+		warn "1)! apply_markup() calling set(text => '$text')";
+		$self->set(text => $text);
 
-		if ($self->get('internal-change')) {
-			warn "#### apply_markup() set_text() wasn't called";
-			$self->set('internal-change', FALSE);
-			warn "*** internal-change SET to ", $self->get('internal-change') ? 'TRUE' : 'FALSE';
-		}
-
+#		if ($self->get('internal-change')) {
+#			warn "#### apply_markup() set_text() wasn't called";
+#			$self->set('internal-change', FALSE);
+#			warn "*** internal-change SET to ", $self->get('internal-change') ? 'TRUE' : 'FALSE';
+#		}
 	}
 
+	if ($self->realized) {
+		warn "    apply_markup() request repaint";
+		my $size = $self->allocation;
+		my $rectangle = Gtk2::Gdk::Rectangle->new(0, 0, $size->width, $size->height);
+		$self->window->invalidate_rect($rectangle, TRUE);
+	}
 
-	
-#	$self->markup_notify(TRUE);
+	# Tell the others that the markup has changed	
+	warn "    apply_markup() tell that markup has changed";
+	$self->signal_emit('markup-changed'=> $self->{markup});
 }
 
 
@@ -246,7 +239,7 @@ sub apply_markup {
 # Notifies the others that the markup has changed. This means that a redraw has
 # to be rescheduled and that the signal 'markup-changed' has to be emitted.
 #
-sub markup_notify {
+sub markup_notify_UNUSED {
 	my $self = shift;
 	my ($changed) = @_;
 
@@ -278,19 +271,24 @@ sub markup_notify {
 #
 sub callback_changed {
 	my $self = shift;
+	warn "2)! callback_changed() text is '", $self->get_text, "'";
 
-	my $changed = FALSE;
-	if (! $self->get('internal-change')) {
-		# The text was changed as if it was a normal Gtk2::Entry either through
-		# $widget->set_text($text) or $widget->set(text => $text). This means that
-		# the markup style has to be removed from the widget. Now the widget will
-		# rendered in plain text without any styles.
-		warn "=== callback_changed() removing markup";
+#	my $changed = FALSE;
+#	if (! $self->get('internal-change')) {
+#		# The text was changed as if it was a normal Gtk2::Entry either through
+#		# $widget->set_text($text) or $widget->set(text => $text). This means that
+#		# the markup style has to be removed from the widget. Now the widget will
+#		# rendered in plain text without any styles.
+#		warn "=== callback_changed() removing markup";
+#		$self->{markup} = undef;
+#	}
+#	else {
+#		$self->set('internal-change', FALSE);
+#		warn "*** internal-change SET to ", $self->get('internal-change') ? 'TRUE' : 'FALSE';
+#	}
+
+	if (!$self->{internal}) {
 		$self->{markup} = undef;
-	}
-	else {
-		$self->set('internal-change', FALSE);
-		warn "*** internal-change SET to ", $self->get('internal-change') ? 'TRUE' : 'FALSE';
 	}
 
 	
@@ -304,9 +302,8 @@ sub callback_changed {
 	else {
 		# Remove the attributes
 		$attributes = Gtk2::Pango::AttrList->new();
-		warn "    Attributes are empty (erase)";
+		warn "==> Attributes will erased";
 	}
-	warn "    callback_changed() text is '", $self->get_text, "', changed is $changed";
 
 
 	# Apply the markup
@@ -322,6 +319,7 @@ sub callback_changed {
 
 
 #	$self->markup_notify($changed);
+	$self->signal_emit('markup-changed'=> $self->{markup});
 
 	return $self->signal_chain_from_overridden(@_);
 }
@@ -361,58 +359,6 @@ sub callback_expose_event {
 	}
 
 	$self->signal_chain_from_overridden(@_);
-}
-
-
-
-sub callback_notify_text {
-return;
-	my $self = shift;
-	my ($pspec) = @_;
-	my $text = $self->get($pspec->{name});
-	warn ">>> internal-change = ", $self->get('internal-change') ? 'TRUE' : 'FALSE';	
-
-	my $changed = FALSE;
-	if (! $self->get('internal-change')) {
-		# The text was changed as if it was a normal Gtk2::Entry either through
-		# $widget->set_text($text) or $widget->set(text => $text). This means that
-		# the markup style has to be removed from the widget. Now the widget will
-		# rendered in plain text without any styles.
-		my $changed = TRUE;
-		warn "==== removing markup";
-		$self->{markup} = undef;
-		# TODO notify the others that the markup has changed
-	}
-	else {
-		$self->set('internal-change', FALSE);
-		warn "*** internal-change SET to ", $self->get('internal-change') ? 'TRUE' : 'FALSE';
-	}
-	
-	# Get the proper attributes to apply
-	my $markup = $self->{'markup'};
-	my $attributes;
-	if (defined $markup) {
-		($attributes) = Gtk2::Pango->parse_markup($markup);
-		warn "    Attributes from $markup";
-	}
-	else {
-		# Remove the attributes
-		$attributes = Gtk2::Pango::AttrList->new();
-		warn "    Attributes are empty (erase)";
-	}
-	warn "    callback_notify_text() text is '", $self->get_text, "', changed is $changed";
-
-
-	# Apply the markup
-	warn "    callback_notify_text() Applying attributes";
-	$self->get_layout->set_attributes($attributes);
-
-
-	if ($self->realized) {
-		my $size = $self->allocation;
-		my $rectangle = Gtk2::Gdk::Rectangle->new(0, 0, $size->width, $size->height);
-		$self->window->invalidate_rect($rectangle, TRUE);
-	}
 }
 
 
