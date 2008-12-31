@@ -52,12 +52,19 @@ sub main {
 sub on_change {
 	my ($widget) = @_;
 
+	print "\n" x 3;
+	my $format = "========= %-10s =========\n";
+	printf $format => 'on_change';
+	warn ">>> internal-change = ", $widget->get('internal-change') ? 'TRUE' : 'FALSE';	
+
 	my $string = $widget->get_text;
 
 	# Validate the entry's text (accepting only letters)
 	$string =~ s/([^a-z]+)/apply_pango_makup($1)/egi;
 
 	$widget->set_markup($string);
+	
+	$widget->signal_stop_emission_by_name('changed');
 }
 
 

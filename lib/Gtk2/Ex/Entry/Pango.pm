@@ -45,11 +45,13 @@ input (for more information about Pango text markup language see
 L<http://library.gnome.org/devel/pango/stable/PangoMarkupFormat.html>).
 
 Keep in mind that a C<Gtk2::Entry> is a simple widget that doesn't support
-advanced text editing and that the markup styles are ephemeral. This means that
-if the widget's text is set using Pango markup than the rendering styles will
-disappear as soon as the users edits the text, even a single key stroke will
-suffice. If the markup style has to persist it's up to the caller to do it by
-registering a I<changed> signal callback and calling L</set_markup>.
+advanced text editing. The C<Gtk2::Entry> widget keeps track of both the text
+and the styles separately. The markup styles are just that styles applied over
+the internal text. In fact it's even possible to have the widget display
+different text than the one stored internally by applying a markup style for a
+another string.
+
+This widget tries to make it easier to apply markup into a text entry.
 
 =head1 INTERFACES
 
@@ -77,7 +79,9 @@ use Gtk2;
 use Carp;
 use Data::Dumper;
 
+
 our $VERSION = '0.01';
+
 
 # See http://gtk2-perl.sourceforge.net/doc/pod/Glib/Object/Subclass.html
 use Glib::Object::Subclass 'Gtk2::Entry' =>
@@ -118,9 +122,11 @@ use Glib::Object::Subclass 'Gtk2::Entry' =>
 #
 # Gtk2 constructor.
 #
-#sub INIT_INSTANCE {
-#	my $self = shift;
-#}
+sub INIT_INSTANCE {
+	my $self = shift;
+	
+	$self->signal_connect('notify::text' => \&callback_notify_text);
+}
 
 
 
@@ -170,7 +176,7 @@ You might want to use the following code snippet for escaping the characters:
 sub set_markup {
 	my $self = shift;
 	my ($markup) = @_;
-warn "set_markup('$markup')";
+	warn "    set_markup('$markup')";
 	$self->set(markup => $markup);
 }
 
@@ -199,12 +205,39 @@ sub apply_markup {
 		croak $@;	
 	}
 
-	# Change the internal text (remember that this is our change)
-	$self->set('internal-change', TRUE);
-	warn "==apply_markup($markup) calling set_text($text)";
-	$self->set_text($text);
 	
-	$self->markup_notify(TRUE);
+	if ($text eq $self->get_text) {
+		# set_text() only changes the text if it's different, since this is the same
+		# text we can just apply the markup.
+	
+		# Apply the markup
+		warn "    callback_changed() Applying attributes";
+		$self->get_layout->set_attributes($attributes);
+
+		if ($self->realized) {
+			my $size = $self->allocation;
+			my $rectangle = Gtk2::Gdk::Rectangle->new(0, 0, $size->width, $size->height);
+			$self->window->invalidate_rect($rectangle, TRUE);
+		}
+	}
+	else {
+		# Change the internal text (remember that this is our change)
+		$self->set('internal-change', TRUE);
+		warn "*** internal-change SET to ", $self->get('internal-change') ? 'TRUE' : 'FALSE';
+		
+		$self->set_text($text);
+
+		if ($self->get('internal-change')) {
+			warn "#### apply_markup() set_text() wasn't called";
+			$self->set('internal-change', FALSE);
+			warn "*** internal-change SET to ", $self->get('internal-change') ? 'TRUE' : 'FALSE';
+		}
+
+	}
+
+
+	
+#	$self->markup_notify(TRUE);
 }
 
 
@@ -226,9 +259,8 @@ sub markup_notify {
 	if ($self->realized) {
 		my $size = $self->allocation;
 		my $rectangle = Gtk2::Gdk::Rectangle->new(0, 0, $size->width, $size->height);
-warn "markup_notify($changed) revalidating region (0, 0, ", $size->width, ", ", $size->height, ")";
+		warn "    markup_notify($changed) revalidating region (0, 0, ", $size->width, ", ", $size->height, ")";
 		$self->window->invalidate_rect($rectangle, TRUE);
-		$self->window->process_updates(TRUE);
 	}
 
 	# Tell the others that the markup has changed	
@@ -246,25 +278,52 @@ warn "markup_notify($changed) revalidating region (0, 0, ", $size->width, ", ", 
 #
 sub callback_changed {
 	my $self = shift;
-	
+
 	my $changed = FALSE;
 	if (! $self->get('internal-change')) {
 		# The text was changed as if it was a normal Gtk2::Entry either through
 		# $widget->set_text($text) or $widget->set(text => $text). This means that
 		# the markup style has to be removed from the widget. Now the widget will
 		# rendered in plain text without any styles.
-		my $changed = TRUE;
-		warn "==== removing markup";
+		warn "=== callback_changed() removing markup";
 		$self->{markup} = undef;
 	}
 	else {
 		$self->set('internal-change', FALSE);
+		warn "*** internal-change SET to ", $self->get('internal-change') ? 'TRUE' : 'FALSE';
 	}
-	warn "callback_changed() text is '", $self->get_text, "', changed is $changed";
 
-	$self->markup_notify($changed);
+	
+	# Get the proper attributes to apply
+	my $markup = $self->{'markup'};
+	my $attributes;
+	if (defined $markup) {
+		($attributes) = Gtk2::Pango->parse_markup($markup);
+		warn "    Attributes from $markup";
+	}
+	else {
+		# Remove the attributes
+		$attributes = Gtk2::Pango::AttrList->new();
+		warn "    Attributes are empty (erase)";
+	}
+	warn "    callback_changed() text is '", $self->get_text, "', changed is $changed";
 
-	$self->signal_chain_from_overridden(@_);
+
+	# Apply the markup
+	warn "    callback_changed() Applying attributes";
+	$self->get_layout->set_attributes($attributes);
+
+
+	if ($self->realized) {
+		my $size = $self->allocation;
+		my $rectangle = Gtk2::Gdk::Rectangle->new(0, 0, $size->width, $size->height);
+		$self->window->invalidate_rect($rectangle, TRUE);
+	}
+
+
+#	$self->markup_notify($changed);
+
+	return $self->signal_chain_from_overridden(@_);
 }
 
 
@@ -293,12 +352,67 @@ sub callback_expose_event {
 
 	my $markup = $self->{markup};
 	if ($markup) {
-		my ($attributes, $text) = Gtk2::Pango->parse_markup($markup);
-		warn "callback_expose_event() setting attributes for '$markup'";
+		my ($attributes) = Gtk2::Pango->parse_markup($markup);
+		warn "    callback_expose_event() Applying attributes '$markup'";
 		$self->get_layout->set_attributes($attributes);
+	}
+	else {
+		warn "    callback_expose_event() Applies NO attributes";
 	}
 
 	$self->signal_chain_from_overridden(@_);
+}
+
+
+
+sub callback_notify_text {
+return;
+	my $self = shift;
+	my ($pspec) = @_;
+	my $text = $self->get($pspec->{name});
+	warn ">>> internal-change = ", $self->get('internal-change') ? 'TRUE' : 'FALSE';	
+
+	my $changed = FALSE;
+	if (! $self->get('internal-change')) {
+		# The text was changed as if it was a normal Gtk2::Entry either through
+		# $widget->set_text($text) or $widget->set(text => $text). This means that
+		# the markup style has to be removed from the widget. Now the widget will
+		# rendered in plain text without any styles.
+		my $changed = TRUE;
+		warn "==== removing markup";
+		$self->{markup} = undef;
+		# TODO notify the others that the markup has changed
+	}
+	else {
+		$self->set('internal-change', FALSE);
+		warn "*** internal-change SET to ", $self->get('internal-change') ? 'TRUE' : 'FALSE';
+	}
+	
+	# Get the proper attributes to apply
+	my $markup = $self->{'markup'};
+	my $attributes;
+	if (defined $markup) {
+		($attributes) = Gtk2::Pango->parse_markup($markup);
+		warn "    Attributes from $markup";
+	}
+	else {
+		# Remove the attributes
+		$attributes = Gtk2::Pango::AttrList->new();
+		warn "    Attributes are empty (erase)";
+	}
+	warn "    callback_notify_text() text is '", $self->get_text, "', changed is $changed";
+
+
+	# Apply the markup
+	warn "    callback_notify_text() Applying attributes";
+	$self->get_layout->set_attributes($attributes);
+
+
+	if ($self->realized) {
+		my $size = $self->allocation;
+		my $rectangle = Gtk2::Gdk::Rectangle->new(0, 0, $size->width, $size->height);
+		$self->window->invalidate_rect($rectangle, TRUE);
+	}
 }
 
 
