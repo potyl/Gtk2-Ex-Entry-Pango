@@ -53,7 +53,11 @@ sub main {
 	# Connect the signals
 	$window->signal_connect(delete_event => sub { Gtk2->main_quit(); });
 
+	my $format = "========= %-10s =========\n";
+
 	$button_markup->signal_connect(clicked => sub {
+		print "\n" x 3;
+		printf $format => 'set_markup a';
 		$entry->set(
 			markup => '<b>smaller</b> text'
 		);
@@ -65,25 +69,26 @@ sub main {
 		$markup->signal_emit('activate');
 	});
 	$markup->signal_connect(activate => sub {
+		print "\n" x 3;
+		printf $format => 'set_markup b';
 		$entry->set_markup($markup->get_text);
 	});
 
-	my $format = "========= %-10s =========\n";
 	$button_text1->signal_connect(clicked => sub {
 		print "\n" x 3;
-		printf $format => 'set_markup';
+		printf $format => 'set_markup 1';
 		$entry->set_markup('sm<b>aller</b> text');
 	});
 
 	$button_text2->signal_connect(clicked => sub {
 		print "\n" x 3;
-		printf $format => 'set_markup';
+		printf $format => 'set_markup 2';
 		$entry->set_markup('s<b>maller</b> text');
 	});
 
 	$button_text3->signal_connect(clicked => sub {
 		print "\n" x 3;
-		printf $format => 'set_text';
+		printf $format => 'set_text 3';
 		$entry->set_text('smaOOOOller text');
 	});
 
