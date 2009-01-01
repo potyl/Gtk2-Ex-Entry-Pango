@@ -78,6 +78,5 @@ sub apply_pango_makup {
 	$text = Glib::Markup::escape_text($text);
 
 	# Apply the Pango markup to the escaped text
-#	return qq(<span underline="error" underline_color="red">$text</span>);
-	return qq(<b>$text</b>);
+	return qq(<span underline="error" underline_color="red">$text</span>);
 }
