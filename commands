@@ -5,7 +5,7 @@ DEST=target
 
 SVN_REPO=$(shell svn info | grep -E '^URL: ' | cut -f2 -d' ' | sed -e 's%/trunk%%')
 VERSION=$(shell perl -le "print `grep VERSION lib/Gtk2/Ex/Entry/Pango.pm`")
-PACKAGE=Gtk2::Ex::Entry::Pango
+PACKAGE=Gtk2-Ex-Entry-Pango
 
 
 .PHONY: info
@@ -16,7 +16,7 @@ info:
 
 
 .PHONY: install
-install: ${DEST}
+install:
 	rm -rf ${DEST} || true
 	mkdir -p ${DEST}
 	perl Makefile.PL INSTALLDIRS=vendor && make && sudo make install PREFIX=target
@@ -29,8 +29,8 @@ ${PACKAGE}-${VERSION}.tar.gz:
 
 
 .PHONY: distcheck
-distcheck:
-	perl Makefile.PL && make && make distcheck
+distcheck: dist
+	make distcheck
 
 
 .PHONY: test
@@ -57,5 +57,6 @@ release: clean dist distcheck tag upload
 .PHONY: clean
 clean:
 	- [ -f make ] && make clean  > /dev/null 2>&1 || true
+	-rm -f Makefile.old 2> /dev/null || true
 	-rm -rf ${PACKAGE}-*/ 2> /dev/null || true
 	-rm ${PACKAGE}-*.tar.gz 2> /dev/null || true
