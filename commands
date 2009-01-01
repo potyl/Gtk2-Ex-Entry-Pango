@@ -60,3 +60,5 @@ clean:
 	-rm -f Makefile.old 2> /dev/null || true
 	-rm -rf ${PACKAGE}-*/ 2> /dev/null || true
 	-rm ${PACKAGE}-*.tar.gz 2> /dev/null || true
+	-rm -f pm_to_blib 2> /dev/null || true
+	-rm -rf blib 2> /dev/null || true
