@@ -185,7 +185,8 @@ sub SET_PROPERTY {
 
 =head2 set_markup
 
-Sets the text of the entry using Pango markup.
+Sets the text of the entry using Pango markup. This method can die if the markup
+is not valid and fails to parse (see L<Gtk2::Pango/parse_markup>).
 
 Parameters:
 
@@ -272,13 +273,7 @@ sub apply_markup {
 	my $text = '';
 	$self->{attributes} = undef;
 	if (defined $markup) {
-		eval {
-			($self->{attributes}, $text) = Gtk2::Pango->parse_markup($markup);
-		};
-		if ($@) {
-			warn "$self Failed to parse the markup $markup because $@";
-			croak $@;	
-		}
+		($self->{attributes}, $text) = Gtk2::Pango->parse_markup($markup);
 	}
 
 	
