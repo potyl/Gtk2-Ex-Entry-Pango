@@ -2,12 +2,11 @@
 
 =head1 NAME
 
-simple.pl - Type in Pango markup and apply it on the fly.
+simple.pl - Apply Pango markup through buttons.
 
 =head1 DESCRIPTION
 
-This sample program allows the user to type in Pango markup and to see the
-results live.
+This sample program provides some buttons that apply pango markup.
 
 =cut
 
@@ -26,32 +25,22 @@ sub main {
 
 	my $window = Gtk2::Window->new();
 
-	my $markup = Gtk2::Entry->new();
 	my $entry = Gtk2::Ex::Entry::Pango->new();
 	
-	my $button_markup = Gtk2::Button->new('Markup');
-	my $button_apply = Gtk2::Button->new('Aply');
-
-	my $button_text1 = Gtk2::Button->new('Text1');
-	my $button_text2 = Gtk2::Button->new('Text2');
-	my $button_text3 = Gtk2::Button->new('Text3');
-	
-	my $hbox_top = new Gtk2::HBox(FALSE, 0);
-	$hbox_top->pack_start($entry, TRUE, TRUE, 0);
-	$hbox_top->pack_start($button_markup, FALSE, FALSE, 0);
+	my $button_markup1 = Gtk2::Button->new('Markup 1');
+	my $button_markup2 = Gtk2::Button->new('Markup 2');
+	my $button_text = Gtk2::Button->new('Text');
 	
 	my $hbox_bottom = new Gtk2::HBox(FALSE, 0);
-	$hbox_bottom->pack_start($markup, TRUE, TRUE, 0);
-	$hbox_bottom->pack_start($button_apply, FALSE, FALSE, 0);
-	$hbox_bottom->pack_start($button_text1, FALSE, FALSE, 0);
-	$hbox_bottom->pack_start($button_text2, FALSE, FALSE, 0);
-	$hbox_bottom->pack_start($button_text3, FALSE, FALSE, 0);
+	$hbox_bottom->pack_start($button_markup1, FALSE, FALSE, 0);
+	$hbox_bottom->pack_start($button_markup2, FALSE, FALSE, 0);
+	$hbox_bottom->pack_start($button_text, FALSE, FALSE, 0);
 
 	my $vbox = new Gtk2::VBox(FALSE, 0);
-	$vbox->pack_start($hbox_top,    TRUE, TRUE, 0);
+	$vbox->pack_start($entry,       TRUE, TRUE, 0);
 	$vbox->pack_start($hbox_bottom, TRUE, TRUE, 0);
 
-	$window->set_focus_child($markup);
+	$window->set_focus_child($button_markup1);
 	$window->add($vbox);
 	
 	# Use pango markup
@@ -63,30 +52,16 @@ sub main {
 	# Connect the signals
 	$window->signal_connect(delete_event => sub { Gtk2->main_quit(); });
 
-	$button_markup->signal_connect(clicked => sub {
-		$entry->set(
-			markup => '<b>smaller</b> text'
-		);
-	});
 
-
-	# Apply the user's Pango text
-	$button_apply->signal_connect(clicked => sub {
-		$markup->signal_emit('activate');
-	});
-	$markup->signal_connect(activate => sub {
-		$entry->set_markup($markup->get_text);
-	});
-
-	$button_text1->signal_connect(clicked => sub {
+	$button_markup1->signal_connect(clicked => sub {
 		$entry->set_markup('sm<b>aller</b> text');
 	});
 
-	$button_text2->signal_connect(clicked => sub {
+	$button_markup2->signal_connect(clicked => sub {
 		$entry->set_markup('s<b>maller</b> text');
 	});
 
-	$button_text3->signal_connect(clicked => sub {
+	$button_text->signal_connect(clicked => sub {
 		$entry->set_text('smaOOOOller text');
 	});
 
