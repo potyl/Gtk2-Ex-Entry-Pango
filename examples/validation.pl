@@ -18,7 +18,6 @@ use warnings;
 use Glib qw(TRUE FALSE);
 use Gtk2 '-init';
 use Gtk2::Ex::Entry::Pango;
-use Data::Dumper;
 
 
 exit main();
@@ -52,17 +51,12 @@ sub main {
 sub on_change {
 	my ($widget) = @_;
 
-	print "\n" x 3;
-	my $format = "========= %-10s =========\n";
-	printf $format => 'on_change';
-
 	my $string = $widget->get_text;
 
 	# Validate the entry's text (accepting only letters)
 	$string =~ s/([^a-z]+)/apply_pango_makup($1)/egi;
 
 	$widget->set_markup($string);
-	
 	$widget->signal_stop_emission_by_name('changed');
 }
 

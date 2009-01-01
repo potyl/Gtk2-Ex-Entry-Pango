@@ -1,5 +1,16 @@
 #!/usr/bin/perl
 
+=head1 NAME
+
+simple.pl - Type in Pango markup and apply it on the fly.
+
+=head1 DESCRIPTION
+
+This sample program allows the user to type in Pango markup and to see the
+results live.
+
+=cut
+
 use strict;
 use warnings;
 
@@ -45,19 +56,14 @@ sub main {
 	
 	# Use pango markup
 	$entry->set_markup(
-#		'<span style="italic">Pango</span> <b>markup</b> is <span underline="error" underline_color="red">NOT</span> hard'
-		'<b>Pan</b><i>go</i>'
+		'<i>Pan</i><b>go</b> is <span underline="error" underline_color="red">fun</span>'
 	);
 	
 
 	# Connect the signals
 	$window->signal_connect(delete_event => sub { Gtk2->main_quit(); });
 
-	my $format = "========= %-10s =========\n";
-
 	$button_markup->signal_connect(clicked => sub {
-		print "\n" x 3;
-		printf $format => 'set_markup a';
 		$entry->set(
 			markup => '<b>smaller</b> text'
 		);
@@ -69,31 +75,23 @@ sub main {
 		$markup->signal_emit('activate');
 	});
 	$markup->signal_connect(activate => sub {
-		print "\n" x 3;
-		printf $format => 'set_markup b';
 		$entry->set_markup($markup->get_text);
 	});
 
 	$button_text1->signal_connect(clicked => sub {
-		print "\n" x 3;
-		printf $format => 'set_markup 1';
 		$entry->set_markup('sm<b>aller</b> text');
 	});
 
 	$button_text2->signal_connect(clicked => sub {
-		print "\n" x 3;
-		printf $format => 'set_markup 2';
 		$entry->set_markup('s<b>maller</b> text');
 	});
 
 	$button_text3->signal_connect(clicked => sub {
-		print "\n" x 3;
-		printf $format => 'set_text 3';
 		$entry->set_text('smaOOOOller text');
 	});
 
 	
-	$window->set_default_size(850, -1);
+	$window->set_default_size(450, -1);
 	$window->show_all();
 	Gtk2->main();
 
