@@ -91,7 +91,7 @@ use Glib::Object::Subclass 'Gtk2::Entry' =>
 		'expose-event'   => \&callback_expose_event,
 
 		'markup-changed' => {
-			flags => ['run-last'],
+			flags       => ['run-last'],
 			param_types => ['Glib::String'],
 		}
 	},
@@ -109,6 +109,18 @@ use Glib::Object::Subclass 'Gtk2::Entry' =>
 ;
 
 
+#
+# Gtk2 constructor.
+#
+sub INIT_INSTANCE {
+	my $self = shift;
+
+	# The Pango attributes to apply to the text. If set to undef then there are no
+	# attributes and the text is rendered normally.
+	$self->{attributes} = undef;
+}
+
+
 
 #
 # Gtk2 generic property setter.
@@ -117,11 +129,15 @@ sub SET_PROPERTY {
 	my ($self, $pspec, $value) = @_;
 	
 	my $field = $pspec->get_name;
-	$self->{$field} = $value;
 
 	if ($field eq 'markup') {
+		# The markup isn't stored, instead it is parsed and the attributes are
+		# stored.
 		$self->apply_markup($value);
 	}
+#	else {
+#		$self->{$field} = $value;
+#	}
 }
 
 
@@ -176,10 +192,10 @@ sub apply_markup {
 	# Parse the markup, this will die if the markup is invalid. It's better to
 	# to let the caller know if there was an error than to wait until the
 	# callbacks reparse the markup.
-	my ($attributes, $text);
+	my $text;
 	eval {
 		my $pango = defined $markup ? $markup : '';
-		($attributes, $text) = Gtk2::Pango->parse_markup($pango);
+		($self->{attributes}, $text) = Gtk2::Pango->parse_markup($pango);
 	};
 	if ($@) {
 		warn "$self Failed to parse the markup $markup because $@";
@@ -193,25 +209,26 @@ sub apply_markup {
 
 		# Apply the markup
 		warn "+++ callback_changed() Applying attributes";
-		$self->get_layout->set_attributes($attributes);
+		$self->set_layout_attributes();
 		warn "+++ callback_changed() applied attributes";
 		
 		$self->request_redraw();
 	}
 	else {
-		# Change the internal text (remember that this is our change)
+		# Change the internal text (an internal change doesn't reset the markup)
 		local $self->{internal} = TRUE;		
 		warn "1)! apply_markup() calling set(text => '$text')";
 		$self->set(text => $text);
 		
 		if ($self->{internal}) {
-			# The signal 'changed' wasn't emited
+			# The signal 'changed' wasn't emited, it can happen sometimes.
+			# Nevertheles, a refresh of the UI needs to be requested.
 			warn "+++ callback_changed() The signal 'changed' wasn't emited, forcing redraw";
 			$self->request_redraw();
 		}
 	}
 
-	$self->signal_emit_markup_changed();
+	$self->signal_emit_markup_changed($markup);
 }
 
 
@@ -245,9 +262,31 @@ sub request_redraw {
 #
 sub signal_emit_markup_changed {
 	my $self = shift;
-	my $markup = defined $self->{markup} ? "'$self->{markup}'" : 'undef';
-	Carp::carp "=-  signal_emit_markup_changed() emitting signal 'markup-changed' => $markup";
+	my ($markup) = @_;
+	my $label = defined $markup ? "'$markup'" : 'undef';
+	Carp::carp "=-  signal_emit_markup_changed($label) emitting signal 'markup-changed'";
 	$self->signal_emit('markup-changed'=> $self->{markup});
+}
+
+
+
+#
+# Applies the attributes to the widget. Gtk2::Pango::Layout::set_attributes()
+# doesn't accept an undef value (a patch has been submitted in order to address
+# this issue). So if the attributes are undef an empty attribute list has to be
+# submitted instead.
+#
+sub set_layout_attributes {
+	my $self = shift;
+	my $attributes = $self->{attributes};
+	if (! defined $attributes) {
+		warn "    set_layout_attributes() Erasing attributes";
+		$attributes = Gtk2::Pango::AttrList->new();
+	}
+	else {
+		warn "    set_layout_attributes() Applying attributes";
+	}
+	$self->get_layout->set_attributes($attributes);
 }
 
 
@@ -261,14 +300,13 @@ sub callback_changed {
 	my $self = shift;
 	warn "2)! callback_changed() text is '", $self->get_text, "'";
 
-
 	if (! $self->{internal}) {
 		# The text was changed as if it was a normal Gtk2::Entry either through
 		# $widget->set_text($text) or $widget->set(text => $text). This means that
 		# the markup style has to be removed from the widget. Now the widget will
 		# rendered in plain text without any styles.
-		$self->{markup} = undef;
-		$self->signal_emit_markup_changed();
+		$self->{attributes} = undef;
+		$self->signal_emit_markup_changed(undef);
 	}
 	else {
 		# Tell us that the callback was called
@@ -276,24 +314,9 @@ sub callback_changed {
 	}
 
 	
-	# Get the proper attributes to apply
-	my $markup = $self->{'markup'};
-	my $attributes;
-	if (defined $markup) {
-		($attributes) = Gtk2::Pango->parse_markup($markup);
-	}
-	else {
-		# Remove the attributes
-		$attributes = Gtk2::Pango::AttrList->new();
-		warn "==> Attributes will be erased";
-	}
-
-
 	# Apply the markup
-	warn "    callback_changed() Applying attributes";
-	$self->get_layout->set_attributes($attributes);
-
-
+	$self->set_layout_attributes();
+	
 	$self->request_redraw();
 	
 	return $self->signal_chain_from_overridden(@_);
@@ -323,15 +346,8 @@ sub callback_expose_event {
 	# style has to be applied afterwards.
 	#
 
-	my $markup = $self->{markup};
-	if ($markup) {
-		my ($attributes) = Gtk2::Pango->parse_markup($markup);
-		warn "    callback_expose_event() Applying attributes '$markup'";
-		$self->get_layout->set_attributes($attributes);
-	}
-	else {
-		warn "    callback_expose_event() Applies NO attributes";
-	}
+	#my ($attributes) = Gtk2::Pango->parse_markup($markup);
+	$self->set_layout_attributes();
 
 	$self->signal_chain_from_overridden(@_);
 }
