@@ -1,6 +1,10 @@
+commands
 Changes
 Makefile.PL
 MANIFEST
 README
+examples/live.pl
+examples/simple.pl
+examples/validation.pl
 t/Gtk2-Ex-Entry-Pango.t
 lib/Gtk2/Ex/Entry/Pango.pm

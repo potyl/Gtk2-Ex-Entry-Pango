@@ -1,0 +1,8 @@
+^target/$
+\.svn
+^blib/$
+^MANIFEST[.]SKIP$
+^pm_to_blib$
+^Makefile$
+^MANIFEST[.]SKIP$
+^Gtk2-Ex-Entry-Pango-
