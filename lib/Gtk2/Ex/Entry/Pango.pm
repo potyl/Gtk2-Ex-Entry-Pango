@@ -14,7 +14,7 @@ Gtk2::Ex::Entry::Pango - Gtk2 Entry that accepts Pango markup.
 	my $entry = Gtk2::Ex::Entry::Pango->new();
 	
 	# You can use any method defined in Gtk2::Entry or set_markup()
-	$entry->set_markup('<span style="italic">Pango markup</span> is easy');
+	$entry->set_markup('<i>Pan</i><b>go</b> is <span color="red">fun</span>');
 	
 	my $vbox = new Gtk2::VBox(FALSE, 0);
 	$vbox->pack_start($entry, FALSE, FALSE, FALSE);
@@ -44,14 +44,57 @@ C<Gtk2::Ex::Entry::Pango> is a L<Gtk2::Entry> that can accept Pango markup as
 input (for more information about Pango text markup language see 
 L<http://library.gnome.org/devel/pango/stable/PangoMarkupFormat.html>).
 
-Keep in mind that a C<Gtk2::Entry> is a simple widget that doesn't support
-advanced text editing. The C<Gtk2::Entry> widget keeps track of both the text
-and the styles separately. The markup styles are just that styles applied over
-the internal text. In fact it's even possible to have the widget display
-different text than the one stored internally by applying a markup style for a
-another string.
+This widget allows for the text data to be entered either through the normal
+methods provided by Gtk2::Entry or to use the method L</set_markup>. It's
+possible to switch between two methods for applying the text. The standard
+Gtk2::Entry methods will always apply a text without styles while
+C<set_markup()> will use a style.
 
-This widget tries to make it easier to apply markup into a text entry.
+The widget C<Gtk2::Ex::Entry::Pango> keeps track of which style to apply by
+listening to the signal I<changed>. This has some important consequences. If an
+instance needs to provide it's own I<changed> listener that calls
+C<set_markup()> then the signal I<changed> has to be stopped otherwise the
+layout will be lost. The following code snippet show how to stop the emission of
+the I<changed> signal:
+
+	my $entry = Gtk2::Ex::Entry::Pango->new();
+	$entry->signal_connect(changed => sub {
+		
+		# Validate the text 
+		my $text = $entry->get_text;
+		if (validate($text)) {
+				return;
+		}
+		
+		# Mark the text as being erroneous
+		my $escaped = Glib::Markup::escape_text($text);
+		$entry->set_markup("<span underline='error' underline_color='red'>$escaped</span>");
+		$entry->signal_stop_emission_by_name('changed');
+	});
+
+Another important thing to note is that C<Gtk2::Entry::set_text()> will not
+update it's content if the input text is the same as the text already stored.
+This means that if set text is called with the same string it will not emit the
+signal I<changed> and the widget will not pickup that the markup styles have to
+be dropped. This is true even it the string displayed uses markup, as long as
+the contents are the same C<set_text()> will not make an update. The method
+L</clear_markup> can be used for safely clearing the markup text.
+
+=head1 CAVEATS
+
+A Gtk2::Entry keeps track of both the text and the markup styles (Pango layout)
+as two different entities . The markup styles are just styles applied over the
+internal text. Because of this it's possible to have the widget display a
+different text than the one stored internally.
+
+Because a Gtk2::Entry keeps track of both the text and the style layouts. It's 
+important to always keep track of both. If the styles and text are not totally
+synchronized strange things will happen. In the worst case it's even possible to
+make the Gtk2::Entry widget display a different text than the one stored (the
+text value). This can make things more confusing.
+
+This widget tries as hard as possible to synchronize the text data and the
+layout data.
 
 =head1 INTERFACES
 
@@ -109,6 +152,7 @@ use Glib::Object::Subclass 'Gtk2::Entry' =>
 ;
 
 
+
 #
 # Gtk2 constructor.
 #
@@ -135,9 +179,6 @@ sub SET_PROPERTY {
 		# stored.
 		$self->apply_markup($value);
 	}
-#	else {
-#		$self->{$field} = $value;
-#	}
 }
 
 
@@ -173,7 +214,45 @@ sub set_markup {
 	my $self = shift;
 	my ($markup) = @_;
 	warn "    set_markup('$markup')";
+
+	#
+	# NOTE: In order to have the markup applied properly both the widget's
+	# internal text value and the Pango style have to be applied. Calling
+	# $self->get_layout->set_markup($markup); is not enough as it will only apply
+	# the markup and render the text in $markup but will not update the internal
+	# text representation of the widget.
+	#
+	# For instance, if the text within the markup differs from the actual text in
+	# the Gtk2::Entry and changes in width there will be some problems. Sure the
+	# entry's text will be rendered properly but the entry will not have the right
+	# data within it's buffer. This means that $self->get_text() will still return
+	# the old text even though the widget displays the new string. Furthermore,
+	# the widget will fail to edit text because the cursor could be placed at a
+	# position that's further than the actual data in the widget.
+	#
+	# To solve this problem the new text has to be added to the entry and the
+	# style has to be applied afterwards. The text is added to the widget through
+	# $self->set(text => $text); by the method apply_markup() while the styles are
+	# applied each time that the widget is rendered (see callback_changed()).
+	#
+
 	$self->set(markup => $markup);
+}
+
+
+
+=head2 clear_markup
+
+Clears the Pango markup that was applied to the widget. This method can be
+called even if no markup was applied previously.
+
+B<NOTE>: That this method will emit the signal I<markup-changed>. 
+
+=cut
+
+sub clear_markup {
+	my $self = shift;
+	$self->set_markup(undef);
 }
 
 
@@ -182,30 +261,30 @@ sub set_markup {
 # Applies the markup to the widget. The markup string is parsed into a text to
 # be displayed and an attribute list (the styles to apply). The text is added
 # normally to the widget as if it was a Gtk2::Entry, while the attributes are
-# applied latter to the widget.
+# stored in order to be applied latter to the widget.
 #
 sub apply_markup {
 	my $self = shift;
 	my ($markup) = @_;
 	warn "    apply_markup('$markup')";
 
-	# Parse the markup, this will die if the markup is invalid. It's better to
-	# to let the caller know if there was an error than to wait until the
-	# callbacks reparse the markup.
-	my $text;
-	eval {
-		my $pango = defined $markup ? $markup : '';
-		($self->{attributes}, $text) = Gtk2::Pango->parse_markup($pango);
-	};
-	if ($@) {
-		warn "$self Failed to parse the markup $markup because $@";
-		croak $@;	
+	# Parse the markup, this will die if the markup is invalid.
+	my $text = '';
+	$self->{attributes} = undef;
+	if (defined $markup) {
+		eval {
+			($self->{attributes}, $text) = Gtk2::Pango->parse_markup($markup);
+		};
+		if ($@) {
+			warn "$self Failed to parse the markup $markup because $@";
+			croak $@;	
+		}
 	}
 
 	
 	if ($text eq $self->get_text) {
-		# set_text() only changes the text if it's different, since this is the same
-		# text we can just apply the markup.
+		# $widget->set_text() only changes the text if it's different, since this is
+		# the same text we can just apply the markup and request a redraw.
 
 		# Apply the markup
 		warn "+++ callback_changed() Applying attributes";
@@ -215,15 +294,16 @@ sub apply_markup {
 		$self->request_redraw();
 	}
 	else {
-		# Change the internal text (an internal change doesn't reset the markup)
+		# Change the entry's text. Mark this as an internal change as a we can't let
+		# the 'changed' callback reset the markup.
 		local $self->{internal} = TRUE;		
 		warn "1)! apply_markup() calling set(text => '$text')";
 		$self->set(text => $text);
 		
 		if ($self->{internal}) {
-			# The signal 'changed' wasn't emited, it can happen sometimes.
-			# Nevertheles, a refresh of the UI needs to be requested.
-			warn "+++ callback_changed() The signal 'changed' wasn't emited, forcing redraw";
+			# The signal 'changed' wasn't emited (it can happen sometimes) so let's
+			# request a refresh of the UI manually.
+			warn "+++ callback_changed() The signal 'changed' wasn't emitted, forcing redraw";
 			$self->request_redraw();
 		}
 	}
@@ -241,17 +321,17 @@ sub apply_markup {
 # the text in the Pango markup could turn out to be the same text that was 
 # previously in the widget but with new styles (this is most common when showing
 # an error with a red underline). In such case the Gtk2::Entry will not refresh
-# it's appearance because the text didn't change. Here we are forcing the update.
+# its appearance because the text didn't change. Here we are forcing the update.
 #
 sub request_redraw {
 	my $self = shift;
 
-	if ($self->realized) {
-		my $size = $self->allocation;
-		my $rectangle = Gtk2::Gdk::Rectangle->new(0, 0, $size->width, $size->height);
-		Carp::carp "*   request_redraw() revalidating region (0, 0, ", $size->width, ", ", $size->height, ")";
-		$self->window->invalidate_rect($rectangle, TRUE);
-	}
+	return unless $self->realized;
+
+	my $size = $self->allocation;
+	my $rectangle = Gtk2::Gdk::Rectangle->new(0, 0, $size->width, $size->height);
+	Carp::carp "*   request_redraw() revalidating region (0, 0, ", $size->width, ", ", $size->height, ")";
+	$self->window->invalidate_rect($rectangle, TRUE);
 }
 
 
@@ -265,7 +345,7 @@ sub signal_emit_markup_changed {
 	my ($markup) = @_;
 	my $label = defined $markup ? "'$markup'" : 'undef';
 	Carp::carp "=-  signal_emit_markup_changed($label) emitting signal 'markup-changed'";
-	$self->signal_emit('markup-changed'=> $self->{markup});
+	$self->signal_emit('markup-changed'=> $markup);
 }
 
 
@@ -316,7 +396,6 @@ sub callback_changed {
 	
 	# Apply the markup
 	$self->set_layout_attributes();
-	
 	$self->request_redraw();
 	
 	return $self->signal_chain_from_overridden(@_);
@@ -326,29 +405,14 @@ sub callback_changed {
 
 #
 # Called each time that the widget needs to be rendered. This happens quite
-# often as the cursor is blinking. Without this callback the Pango style would
-# be lost randomly.
+# often as an entry field can have a cursor blinking. Without this callback the
+# Pango style would be lost at each redraw.
 #
 sub callback_expose_event {
 	my $self = shift;
 	my ($event) = @_;
-	
-	# Calling $self->get_layout->set_markup($markup); is not enough. For instance,
-	# if the text within the markup differs from the actual text in the
-	# Gtk2::Entry and changes in width there will be some problems. Sure the
-	# entry's text will be rendered properly but the entry will not have the right
-	# data within it's buffer. This means that $self->get_text() will still return
-	# the old text even though the widget displays the new string. Furthermore,
-	# the widget will fail to edit text because the cursor could be placed at a
-	# position that's further than the actual data in the widget.
-	#
-	# To solve this problem the new text has to be added to the entry and the
-	# style has to be applied afterwards.
-	#
 
-	#my ($attributes) = Gtk2::Pango->parse_markup($markup);
 	$self->set_layout_attributes();
-
 	$self->signal_chain_from_overridden(@_);
 }
 
@@ -366,7 +430,8 @@ The following properties are added by this widget:
 (string: writable)
 
 The markup text used by this widget. This property is a string that's only
-writable. That's right there's no way for extracting the markup from the widget.
+writable. That's right, there's no way for extracting the markup from the
+widget.
 
 =head1 SIGNALS
 
@@ -394,8 +459,9 @@ C<$markup> is C<undef> then the markup was removed.
 
 =head1 SEE ALSO
 
-Take a look at the examples for getting some ideas or inspiration. For a more
-powerful text widget take a look at L<Gtk2::TextView>.
+Take a look at the examples for getting some ideas or inspiration on how to use
+this widget. For a more powerful text widget that supports more operations take
+a look at L<Gtk2::TextView>.
 
 =head1 AUTHORS
 
@@ -410,3 +476,4 @@ it under the same terms as Perl itself, either Perl version 5.8.8 or,
 at your option, any later version of Perl 5 you may have available.
 
 =cut
+
