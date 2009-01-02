@@ -6,25 +6,34 @@ Gtk2::Ex::Entry::Pango - Gtk2 Entry that accepts Pango markup.
 
 =head1 SYNOPSIS
 
-	use Gtk2 qw(-init);
-	use Glib qw(TRUE FALSE);
 	use Gtk2::Ex::Entry::Pango;
 	
-	my $window = Gtk2::Window->new();
-	my $entry = Gtk2::Ex::Entry::Pango->new();
 	
 	# You can use any method defined in Gtk2::Entry or set_markup()
+	my $entry = Gtk2::Ex::Entry::Pango->new();
 	$entry->set_markup('<i>Pan</i><b>go</b> is <span color="red">fun</span>');
 	
-	my $vbox = new Gtk2::VBox(FALSE, 0);
-	$vbox->pack_start($entry, FALSE, FALSE, FALSE);
-	$vbox->set_focus_child($entry);
-	$window->add($vbox);
 	
-	$window->signal_connect(delete_event => sub { Gtk2->main_quit(); });
+	# Create a simple search field
+	my $search = Gtk2::Ex::Entry::Pango->new();
+	$search->set_empty_markup("<span color='grey' size='smaller'>Search...</span>");
 	
-	$window->show_all();
-	Gtk2->main();
+	
+	# Realtime validation - accept only ASCII letters
+	my $validation = Gtk2::Ex::Entry::Pango->new();
+	$validation->signal_connect(changed => sub {
+		my $text = $validation->get_text;
+	
+		# Validate the entry's text
+		if ($text =~ /^[a-z]*$/) {
+			return;
+		}
+	
+		# Mark the string as being erroneous
+		my $escaped = Glib::Markup::escape_text($text);
+		$validation->set_markup(<span underline="error" underline_color="red">escaped</span>);
+		$validation->signal_stop_emission_by_name('changed');
+	});
 
 =head1 HIERARCHY
 
@@ -40,9 +49,14 @@ C<Gtk2::Ex::Entry::Pango> is a subclass of L<Gtk2::Entry>.
 
 =head1 DESCRIPTION
 
-C<Gtk2::Ex::Entry::Pango> is a C<Gtk2::Entry> that can accept Pango markup as
-input (for more information about Pango text markup language see 
+C<Gtk2::Ex::Entry::Pango> is a C<Gtk2::Entry> that can accept Pango markup for
+various purposes (for more information about Pango text markup language see 
 L<http://library.gnome.org/devel/pango/stable/PangoMarkupFormat.html>).
+
+The widget allows Pango markup to be used for input as an alternative to
+C<set_text> or for setting a default value when the widget is empty. The default
+value when empty is ideal for standalone text entries that have no accompanying
+label (such as a text field for a search).
 
 This widget allows for the text data to be entered either through the normal
 methods provided by C<Gtk2::Entry> or to use the method L</set_markup>. It's
@@ -121,15 +135,16 @@ use Glib qw(TRUE FALSE);
 use Gtk2;
 
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 
 # See http://gtk2-perl.sourceforge.net/doc/pod/Glib/Object/Subclass.html
 use Glib::Object::Subclass 'Gtk2::Entry' =>
 
 	signals => {
-		'changed'        => \&callback_changed,
-		'expose-event'   => \&callback_expose_event,
+		'changed'            => \&callback_changed,
+		'expose-event'       => \&callback_expose_event,
+		'button-press-event' => \&callback_button_press_event,
 
 		'markup-changed' => {
 			flags       => ['run-last'],
@@ -141,10 +156,18 @@ use Glib::Object::Subclass 'Gtk2::Entry' =>
 	properties => [
 		Glib::ParamSpec->string(
 			'markup',
-			'markup',
+			'Markup',
 			'The Pango markup used for displaying the contents of the entry.',
 			'',
 			['writable'],
+		),
+
+		Glib::ParamSpec->string(
+			'empty-markup',
+			'Markup when empty',
+			'The default Pango markup to display when the entry is empty.',
+			'',
+			['readable', 'writable'],
 		),
 	],
 ;
@@ -160,6 +183,10 @@ sub INIT_INSTANCE {
 	# The Pango attributes to apply to the text. If set to undef then there are no
 	# attributes and the text is rendered normally.
 	$self->{attributes} = undef;
+	
+	# The Pango text and attributes to apply when the entry has no text.
+	$self->{'empty_attributes'} = undef;
+	$self->{'empty_text'} = undef;
 }
 
 
@@ -176,6 +203,15 @@ sub SET_PROPERTY {
 		# The markup isn't stored, instead it is parsed and the attributes are
 		# stored.
 		$self->apply_markup($value);
+	}
+	elsif ($field eq 'empty_markup') {
+		if (defined $value) {
+			($self->{empty_attributes}, $self->{empty_text}) = Gtk2::Pango->parse_markup($value);
+		}
+		else {
+			($self->{empty_attributes}, $self->{empty_text}) = (undef, undef);
+		}
+		$self->{$field} = $value;
 	}
 }
 
@@ -199,10 +235,9 @@ XML.
 
 You might want to use the following code snippet for escaping the characters:
 
-	use Glib::Markup qw(escape_text);
 	$entry->set_markup(
 		sprintf "The <i>%s</i> <b>%s</b> fox <sup>%s</sup> over the lazy dog",
-			map { escape_text($_) } ('quick', 'brown', 'jumps')
+			map { Glib::Markup::escape_text($_) } qw(quick brown jumps)
 	);
 
 =back	
@@ -213,7 +248,6 @@ sub set_markup {
 	my $self = shift;
 	my ($markup) = @_;
 
-	#
 	# NOTE: In order to have the markup applied properly both the widget's
 	# internal text value and the Pango style have to be applied. Calling
 	# $self->get_layout->set_markup($markup); is not enough as it will only apply
@@ -232,8 +266,6 @@ sub set_markup {
 	# style has to be applied afterwards. The text is added to the widget through
 	# $self->set(text => $text); by the method apply_markup() while the styles are
 	# applied each time that the widget is rendered (see callback_changed()).
-	#
-
 	$self->set(markup => $markup);
 }
 
@@ -251,6 +283,48 @@ B<NOTE>: That this method will emit the signal I<markup-changed>.
 sub clear_markup {
 	my $self = shift;
 	$self->set_markup(undef);
+}
+
+
+
+=head2 set_empty_markup
+
+Sets the Pango markup that was applied to the widget when there's the entry is
+empty. This method can die if the markup is not valid and fails to parse
+(see L<Gtk2::Pango/parse_markup>).
+
+Parameters:
+
+=over
+
+=item * $markup
+
+The text to add to the entry, the text is expected to be using Pango markup.
+Make sure to escape all characters with L<Glib::Markup/escape_text>. For more
+details about escaping the markup see L</set_markup>.
+
+=back	
+
+=cut
+
+sub set_empty_markup {
+	my $self = shift;
+	my ($markup) = @_;
+	$self->set(empty_markup => $markup);
+}
+
+
+
+=head2 clear_emtpy_markup
+
+Clears the Pango markup that was applied to the widget. This method can be
+called even if no markup was applied previously.
+
+=cut
+
+sub clear_emtpy_markup {
+	my $self = shift;
+	$self->set_empty_markup(undef);
 }
 
 
@@ -339,11 +413,18 @@ sub signal_emit_markup_changed {
 #
 sub set_layout_attributes {
 	my $self = shift;
-	my $attributes = $self->{attributes};
-	if (! defined $attributes) {
-		$attributes = Gtk2::Pango::AttrList->new();
+	
+	if ($self->get_text) {
+		my $attributes = $self->{attributes};
+		if (! defined $attributes) {
+			$attributes = Gtk2::Pango::AttrList->new();
+		}
+		$self->get_layout->set_attributes($attributes);
 	}
-	$self->get_layout->set_attributes($attributes);
+	elsif ($self->{empty_markup}) {
+		$self->get_layout->set_text($self->{empty_text});
+		$self->get_layout->set_attributes($self->{empty_attributes});
+	}
 }
 
 
@@ -390,6 +471,29 @@ sub callback_expose_event {
 
 	$self->set_layout_attributes();
 	$self->signal_chain_from_overridden(@_);
+}
+
+
+
+#
+# This handler stops the widget from generating critical Pango warnings when the
+# text selection gesture is performed. If there's no text in the widget we
+# simply cancel the gesture.
+#
+# The gesture is done with: mouse button 1 pressed and dragged over the widget
+# while the button is still pressed.
+#
+sub callback_button_press_event {
+	my $self = shift;
+	
+	if ($self->get_text) {
+		# Propagate the event further since there's text in the widget
+		return $self->signal_chain_from_overridden(@_);
+	}
+	
+	# Give focus to the widget but stop the text selection
+	$self->grab_focus();
+	return TRUE;
 }
 
 
