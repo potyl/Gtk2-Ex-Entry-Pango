@@ -149,7 +149,12 @@ use Glib::Object::Subclass 'Gtk2::Entry' =>
 		'markup-changed' => {
 			flags       => ['run-last'],
 			param_types => ['Glib::String'],
-		}
+		},
+
+		'empty-markup-changed' => {
+			flags       => ['run-last'],
+			param_types => ['Glib::String'],
+		},
 	},
 
 
@@ -212,6 +217,7 @@ sub SET_PROPERTY {
 			($self->{empty_attributes}, $self->{empty_text}) = (undef, undef);
 		}
 		$self->{$field} = $value;
+		$self->signal_emit('empty-markup-changed' => $value);
 	}
 }
 
@@ -293,6 +299,10 @@ Sets the Pango markup that was applied to the widget when there's the entry is
 empty. This method can die if the markup is not valid and fails to parse
 (see L<Gtk2::Pango/parse_markup>).
 
+C<NOTE:> Setting an empty markup string has no effect on C<get_text>. When an
+empty markup string is used the entry holds no data thus C<get_text> will return
+an empty string.
+
 Parameters:
 
 =over
@@ -315,14 +325,14 @@ sub set_empty_markup {
 
 
 
-=head2 clear_emtpy_markup
+=head2 clear_empty_markup
 
 Clears the Pango markup that was applied to the widget. This method can be
 called even if no markup was applied previously.
 
 =cut
 
-sub clear_emtpy_markup {
+sub clear_empty_markup {
 	my $self = shift;
 	$self->set_empty_markup(undef);
 }
@@ -413,7 +423,7 @@ sub signal_emit_markup_changed {
 #
 sub set_layout_attributes {
 	my $self = shift;
-	
+
 	if ($self->get_text) {
 		my $attributes = $self->{attributes};
 		if (! defined $attributes) {
@@ -513,6 +523,14 @@ The markup text used by this widget. This property is a string that's only
 writable. That's right, there's no way for extracting the markup from the
 widget.
 
+=head2 empty-markup
+
+(string: readable writable)
+
+The markup text used by this widget when the entry field is empty. If this
+property is set the entry will display a default string in the widget when
+there's no text provided by the user.
+
 =head1 SIGNALS
 
 =head2 markup-changed
@@ -534,6 +552,28 @@ Parameters:
 
 The new markup that's been applied. This field is a normal Perl string. If
 C<$markup> is C<undef> then the markup was removed.
+
+=back	
+
+=head2 empty-markup-changed
+
+Emitted when the markup used when the widget is empty has been changed.
+
+Signature:
+
+	sub empty_markup_changed {
+		my ($widget, $markup) = @_;
+		# Returns nothing
+	}
+
+Parameters:
+
+=over
+
+=item * $markup
+
+The new markup that's been applied when the widget is empty. This field is a
+normal Perl string. If C<$markup> is C<undef> then the markup was removed.
 
 =back	
 
