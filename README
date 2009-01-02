@@ -1,16 +1,15 @@
-Gtk2-Ex-Entry-Pango version 0.01
-===================================
+Gtk2-Ex-Entry-Pango
+===================
 
-The README is used to introduce the module and provide instructions on
-how to install the module, any machine dependencies it may have (for
-example C compilers and installed libraries) and any other information
-that should be provided before the module is installed.
+Gtk2::Ex::Entry::Pango is a Gtk2::Entry that can accept Pango markup as input
+(for more information about Pango text markup language see 
+http://library.gnome.org/devel/pango/stable/PangoMarkupFormat.html).
 
-A README file is required for CPAN modules since CPAN extracts the
-README file from a module distribution so that people browsing the
-archive can use it get an idea of the modules uses. It is usually a
-good idea to provide version information here so that people can
-decide whether fixes for the module are worth downloading.
+This widget allows for the text data to be entered either through the normal methods
+provided by Gtk2::Entry or to use the method set_markup. It's possible to switch
+between two methods for applying the text. The standard Gtk2::Entry methods will
+always apply a text without styles while set_markup() will use a style.
+
 
 INSTALLATION
 
@@ -21,20 +20,18 @@ To install this module type the following:
    make test
    make install
 
+
 DEPENDENCIES
 
 This module requires these other modules and libraries:
 
-  blah blah blah
+  Gtk2
+
 
 COPYRIGHT AND LICENCE
-
-Put the correct copyright and licence information here.
 
 Copyright (C) 2008-2009 by Emmanuel Rodriguez
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.8.8 or,
 at your option, any later version of Perl 5 you may have available.
-
-

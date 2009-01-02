@@ -1,6 +1,5 @@
 Revision history for Perl extension Gtk2::Ex::Entry::Pango.
 
-0.01  Mon Dec 29 18:08:39 2008
-	- original version; created by h2xs 1.23 with options
-		-AX -n Gtk2::Ex::Entry::Pango
+0.01  Fri Jan  2 10:06:06 CET 2009
+	- Initial release.
 
