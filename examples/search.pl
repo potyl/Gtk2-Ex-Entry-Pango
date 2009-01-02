@@ -28,14 +28,14 @@ sub main {
 
 	my $entry = create_widgets();
 
-	# Display the widget's default markup when the widget is empty. Needs to be
-	# done each time time that there's a change or that the widget is rendered.
-	$entry->signal_connect('button-press-event' => \&set_default_markup);
-	$entry->signal_connect(changed => \&set_default_markup);
+	# Cancel the text selection when there's no text in the widget
+	$entry->signal_connect('button-press-event' => \&on_button_press);
 
-	# Each time that the window is redrawn we might need to add the default text.
-	# The Pango styles are quite volatile so we need to reset them.
-	$entry->signal_connect(expose_event => \&set_default_markup);
+	# Set the default markup each time that the window is redrawn. The Pango
+	# styles are quite volatile so we need to reset them after each redraw.
+	# Setting the Pango markup on the 'changed' event is not enough as a resize
+	# will lose the markup. The 'expose-event' is a better place.
+	$entry->signal_connect(expose_event => \&on_expose);
 
 	Gtk2->main();
 
@@ -44,7 +44,7 @@ sub main {
 
 
 
-sub set_default_markup {
+sub on_expose {
 	my ($widget) = @_;
 	if ($widget->get_text eq "") {
 		$widget->get_layout->set_markup("<span color='grey'>Search...</span>");
@@ -57,10 +57,10 @@ sub on_button_press {
 	my ($widget, $event) = @_;
 	
 	# This handler stops the widget from generating critical Pango warnings when
-	# the text selection gesture is performed on the widget. If there's no text in
-	# the widget we simply cancel the gesture.
+	# the text selection gesture is performed. If there's no text in the widget we
+	# simply cancel the gesture.
 	#
-	# The gesture is done with: mouse button 1 pressed and draged over the widget
+	# The gesture is done with: mouse button 1 pressed and dragged over the widget
 	# while the button is still pressed.
 	if ($widget->get_text eq "") {
 		$widget->grab_focus();
@@ -77,9 +77,12 @@ sub create_widgets {
 
 	$window->add($entry);
 	
-	$window->signal_connect(delete_event => sub { Gtk2->main_quit(); });
+	$window->signal_connect(delete_event => sub {
+		Gtk2->main_quit();
+	});
 	
 	$window->show_all();
 
 	return $entry;
 }
+
