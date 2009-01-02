@@ -40,14 +40,14 @@ C<Gtk2::Ex::Entry::Pango> is a subclass of L<Gtk2::Entry>.
 
 =head1 DESCRIPTION
 
-C<Gtk2::Ex::Entry::Pango> is a L<Gtk2::Entry> that can accept Pango markup as
+C<Gtk2::Ex::Entry::Pango> is a C<Gtk2::Entry> that can accept Pango markup as
 input (for more information about Pango text markup language see 
 L<http://library.gnome.org/devel/pango/stable/PangoMarkupFormat.html>).
 
 This widget allows for the text data to be entered either through the normal
-methods provided by Gtk2::Entry or to use the method L</set_markup>. It's
+methods provided by C<Gtk2::Entry> or to use the method L</set_markup>. It's
 possible to switch between two methods for applying the text. The standard
-Gtk2::Entry methods will always apply a text without styles while
+C<Gtk2::Entry> methods will always apply a text without styles while
 C<set_markup()> will use a style.
 
 The widget C<Gtk2::Ex::Entry::Pango> keeps track of which style to apply by
@@ -82,16 +82,16 @@ L</clear_markup> can be used for safely clearing the markup text.
 
 =head1 CAVEATS
 
-A Gtk2::Entry keeps track of both the text and the markup styles (Pango layout)
-as two different entities . The markup styles are just styles applied over the
-internal text. Because of this it's possible to have the widget display a
-different text than the one stored internally.
+A C<Gtk2::Entry> keeps track of both the text and the markup styles (Pango
+layout) as two different entities . The markup styles are just styles applied
+over the internal text. Because of this it's possible to have the widget display
+a different text than the one stored internally.
 
-Because a Gtk2::Entry keeps track of both the text and the style layouts. It's 
-important to always keep track of both. If the styles and text are not totally
-synchronized strange things will happen. In the worst case it's even possible to
-make the Gtk2::Entry widget display a different text than the one stored (the
-text value). This can make things more confusing.
+Because a C<Gtk2::Entry> keeps track of both the text and the style layouts.
+It's important to always keep track of both. If the styles and text are not
+totally synchronized strange things will happen. In the worst case it's even
+possible to make the C<Gtk2::Entry> widget display a different text than the one
+stored (the text value). This can make things more confusing.
 
 This widget tries as hard as possible to synchronize the text data and the
 layout data.
@@ -276,10 +276,7 @@ sub apply_markup {
 	if ($text eq $self->get_text) {
 		# $widget->set_text() only changes the text if it's different, since this is
 		# the same text we can just apply the markup and request a redraw.
-
-		# Apply the markup
 		$self->set_layout_attributes();
-		
 		$self->request_redraw();
 	}
 	else {
