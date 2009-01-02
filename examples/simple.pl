@@ -6,7 +6,7 @@ simple.pl - Apply Pango markup through buttons.
 
 =head1 DESCRIPTION
 
-This sample program provides some buttons that apply pango markup.
+This sample program provides some buttons that apply Pango markup.
 
 =cut
 
@@ -43,7 +43,7 @@ sub main {
 	$window->set_focus_child($button_markup1);
 	$window->add($vbox);
 	
-	# Use pango markup
+	# Use Pango markup
 	$entry->set_markup(
 		'<i>Pan</i><b>go</b> is <span underline="error" underline_color="red">fun</span>'
 	);

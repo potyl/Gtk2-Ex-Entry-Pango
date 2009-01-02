@@ -42,7 +42,7 @@ sub main {
 	$window->set_focus_child($markup);
 	$window->add($vbox);
 	
-	# Use pango markup
+	# Use Pango markup
 	$entry->set_markup(
 		'<i>Pan</i><b>go</b> is <span underline="error" underline_color="red">fun</span>'
 	);
