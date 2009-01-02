@@ -18,7 +18,6 @@ use warnings;
 
 use Glib qw(TRUE FALSE);
 use Gtk2 '-init';
-use Data::Dumper;
 
 
 exit main();
