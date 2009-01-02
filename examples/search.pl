@@ -35,7 +35,7 @@ sub main {
 	# styles are quite volatile so we need to reset them after each redraw.
 	# Setting the Pango markup on the 'changed' event is not enough as a resize
 	# will lose the markup. The 'expose-event' is a better place.
-	$entry->signal_connect(expose_event => \&on_expose);
+	$entry->signal_connect('expose-event' => \&on_expose);
 
 	Gtk2->main();
 
@@ -45,27 +45,32 @@ sub main {
 
 sub on_expose {
 	my ($widget) = @_;
-	if ($widget->get_text eq "") {
-		$widget->get_layout->set_markup("<span color='grey'>Search...</span>");
-	}
+	return if $widget->get_text;
+
+	# Set the widget's default text
+	$widget->get_layout->set_markup("<span color='grey' size='smaller'>Search...</span>");
 }
 
 
+#
+# This handler stops the widget from generating critical Pango warnings when the
+# text selection gesture is performed. If there's no text in the widget we
+# simply cancel the gesture.
+#
+# The gesture is done with: mouse button 1 pressed and dragged over the widget
+# while the button is still pressed.
+#
 sub on_button_press {
 	my ($widget, $event) = @_;
 	
-	# This handler stops the widget from generating critical Pango warnings when
-	# the text selection gesture is performed. If there's no text in the widget we
-	# simply cancel the gesture.
-	#
-	# The gesture is done with: mouse button 1 pressed and dragged over the widget
-	# while the button is still pressed.
-	if ($widget->get_text eq "") {
-		$widget->grab_focus();
-		return TRUE;
+	if ($widget->get_text) {
+		# Propagate the event further since there's text in the widget
+		return FALSE;		
 	}
 	
-	return FALSE;
+	# Give focus to the widget but stop the text selection
+	$widget->grab_focus();
+	return TRUE;
 }
 
 
