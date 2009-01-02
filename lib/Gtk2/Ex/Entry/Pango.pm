@@ -119,8 +119,6 @@ use warnings;
 
 use Glib qw(TRUE FALSE);
 use Gtk2;
-use Carp;
-use Data::Dumper;
 
 
 our $VERSION = '0.01';
@@ -214,7 +212,6 @@ You might want to use the following code snippet for escaping the characters:
 sub set_markup {
 	my $self = shift;
 	my ($markup) = @_;
-	warn "    set_markup('$markup')";
 
 	#
 	# NOTE: In order to have the markup applied properly both the widget's
@@ -267,7 +264,6 @@ sub clear_markup {
 sub apply_markup {
 	my $self = shift;
 	my ($markup) = @_;
-	warn "    apply_markup('$markup')";
 
 	# Parse the markup, this will die if the markup is invalid.
 	my $text = '';
@@ -282,9 +278,7 @@ sub apply_markup {
 		# the same text we can just apply the markup and request a redraw.
 
 		# Apply the markup
-		warn "+++ callback_changed() Applying attributes";
 		$self->set_layout_attributes();
-		warn "+++ callback_changed() applied attributes";
 		
 		$self->request_redraw();
 	}
@@ -292,13 +286,11 @@ sub apply_markup {
 		# Change the entry's text. Mark this as an internal change as a we can't let
 		# the 'changed' callback reset the markup.
 		local $self->{internal} = TRUE;		
-		warn "1)! apply_markup() calling set(text => '$text')";
 		$self->set(text => $text);
 		
 		if ($self->{internal}) {
 			# The signal 'changed' wasn't emited (it can happen sometimes) so let's
 			# request a refresh of the UI manually.
-			warn "+++ callback_changed() The signal 'changed' wasn't emitted, forcing redraw";
 			$self->request_redraw();
 		}
 	}
@@ -325,7 +317,6 @@ sub request_redraw {
 
 	my $size = $self->allocation;
 	my $rectangle = Gtk2::Gdk::Rectangle->new(0, 0, $size->width, $size->height);
-	Carp::carp "*   request_redraw() revalidating region (0, 0, ", $size->width, ", ", $size->height, ")";
 	$self->window->invalidate_rect($rectangle, TRUE);
 }
 
@@ -338,8 +329,6 @@ sub request_redraw {
 sub signal_emit_markup_changed {
 	my $self = shift;
 	my ($markup) = @_;
-	my $label = defined $markup ? "'$markup'" : 'undef';
-	Carp::carp "=-  signal_emit_markup_changed($label) emitting signal 'markup-changed'";
 	$self->signal_emit('markup-changed'=> $markup);
 }
 
@@ -355,11 +344,7 @@ sub set_layout_attributes {
 	my $self = shift;
 	my $attributes = $self->{attributes};
 	if (! defined $attributes) {
-		warn "    set_layout_attributes() Erasing attributes";
 		$attributes = Gtk2::Pango::AttrList->new();
-	}
-	else {
-		warn "    set_layout_attributes() Applying attributes";
 	}
 	$self->get_layout->set_attributes($attributes);
 }
@@ -373,7 +358,6 @@ sub set_layout_attributes {
 #
 sub callback_changed {
 	my $self = shift;
-	warn "2)! callback_changed() text is '", $self->get_text, "'";
 
 	if (! $self->{internal}) {
 		# The text was changed as if it was a normal Gtk2::Entry either through

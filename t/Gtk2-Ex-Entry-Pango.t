@@ -12,7 +12,7 @@ BEGIN {
 
 my $MARKUP_VOID = -1;
 my $MAX_INT = 0;
-use Data::Dumper;
+
 
 exit main();
 
@@ -25,7 +25,7 @@ sub main {
 	# The styles always end at MAX INT and not at the lenght of the string. This
 	# code find the maximum size that a style can have.
 	$MAX_INT = get_styles($entry)->[0][1];
-	ok($MAX_INT > 0, "Got a decent MAX_INT");
+	ok($MAX_INT > 0);
 
 
 	# Intercept all markup changes. $MARKUP_VOID indicates that the callback
@@ -56,7 +56,6 @@ sub main {
 	$entry->set_markup("m<b>a</b>rk<b>u</b>p");
 	is($entry->get_text(), "markup");
 	is($markup_signal, "m<b>a</b>rk<b>u</b>p");
-print "Styles got ", Dumper(get_styles($entry));
 	is_deeply(
 		get_styles($entry),
 		[
