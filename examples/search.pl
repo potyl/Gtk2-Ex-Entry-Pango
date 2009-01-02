@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-test.pl - Try to make a search text entry
+search.pl - Simple search text entry.
 
 =head1 DESCRIPTION
 
@@ -43,14 +43,12 @@ sub main {
 }
 
 
-
 sub on_expose {
 	my ($widget) = @_;
 	if ($widget->get_text eq "") {
 		$widget->get_layout->set_markup("<span color='grey'>Search...</span>");
 	}
 }
-
 
 
 sub on_button_press {
