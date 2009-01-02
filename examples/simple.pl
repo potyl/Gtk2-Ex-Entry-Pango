@@ -66,7 +66,6 @@ sub main {
 	});
 
 	
-	$window->set_default_size(450, -1);
 	$window->show_all();
 	Gtk2->main();
 
