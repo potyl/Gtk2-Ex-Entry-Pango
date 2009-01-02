@@ -31,7 +31,7 @@ Gtk2::Ex::Entry::Pango - Gtk2 Entry that accepts Pango markup.
 	
 		# Mark the string as being erroneous
 		my $escaped = Glib::Markup::escape_text($text);
-		$validation->set_markup(<span underline="error" underline_color="red">escaped</span>);
+		$validation->set_markup("<span underline='error' underline_color='red'>$escaped</span>");
 		$validation->signal_stop_emission_by_name('changed');
 	});
 
