@@ -135,7 +135,7 @@ use Glib qw(TRUE FALSE);
 use Gtk2;
 
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 
 # See http://gtk2-perl.sourceforge.net/doc/pod/Glib/Object/Subclass.html
@@ -480,7 +480,7 @@ sub callback_expose_event {
 	my ($event) = @_;
 
 	$self->set_layout_attributes();
-	$self->signal_chain_from_overridden(@_);
+	return $self->signal_chain_from_overridden(@_);
 }
 
 
