@@ -1,5 +1,9 @@
 Revision history for Perl extension Gtk2::Ex::Entry::Pango.
 
+
+0.02  Fri Jan  2 22:08:00 CET 2009
+	- Can display a default value when the widget is empty.
+
+
 0.01  Fri Jan  2 10:06:06 CET 2009
 	- Initial release.
-
