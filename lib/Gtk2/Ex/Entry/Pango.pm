@@ -495,8 +495,9 @@ sub callback_expose_event {
 #
 sub callback_button_press_event {
 	my $self = shift;
+	my ($event) = @_;
 	
-	if ($self->get_text) {
+	if ($self->get_text or $event->button != 1) {
 		# Propagate the event further since there's text in the widget
 		return $self->signal_chain_from_overridden(@_);
 	}
