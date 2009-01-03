@@ -1,6 +1,11 @@
 Revision history for Perl extension Gtk2::Ex::Entry::Pango.
 
 
+0.03  Sat Jan  3 17:37:46 CET 2009
+	- Fixed the paste with a middle click when the widget is empty.
+	- Fixed the right click popup menu when the widget is empty.
+
+
 0.02  Fri Jan  2 22:08:00 CET 2009
 	- Can display a default value when the widget is empty.
 
