@@ -135,7 +135,7 @@ use Glib qw(TRUE FALSE);
 use Gtk2;
 
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 
 # See http://gtk2-perl.sourceforge.net/doc/pod/Glib/Object/Subclass.html
