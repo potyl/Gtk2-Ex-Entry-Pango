@@ -3,7 +3,9 @@
 use strict;
 use warnings;
 
-use Gtk2::TestHelper tests => 30;
+use Carp;
+
+use Gtk2::TestHelper tests => 34;
 
 BEGIN {
 	use_ok('Gtk2::Ex::Entry::Pango')
@@ -20,6 +22,7 @@ exit main();
 sub main {
 	test_set_markup();
 	test_set_empty_markup();
+	test_bad_usage();
 }
 
 
@@ -216,3 +219,56 @@ sub get_styles {
 	return \@collected;
 }
 
+
+#
+# Testing that using wrong input will throw an exception.
+#
+sub test_bad_usage {
+	my $entry = Gtk2::Ex::Entry::Pango->new();
+	
+	test_die(
+		sub { $entry->set_markup("Me & You");},
+		qr/^Error on line 1: Character ' ' is not valid at the start of an entity name;/,
+		"set_markup is passed a character not escaped",
+	);
+	
+	test_die(
+		sub { $entry->set_markup("4 < 5");},
+		qr/^Error on line 1 char 12: ' ' is not a valid character following a '<' character;/,
+		"set_markup is passed broken XML",
+	);
+	
+	test_die(
+		sub { $entry->set_empty_markup("Me & You");},
+		qr/^Error on line 1: Character ' ' is not valid at the start of an entity name;/,
+		"set_empty_markup is passed a character not escaped",
+	);
+	
+	test_die(
+		sub { $entry->set_empty_markup("4 < 5");},
+		qr/^Error on line 1 char 12: ' ' is not a valid character following a '<' character;/,
+		"set_empty_markup is passed broken XML",
+	);
+}
+
+
+sub test_die {
+	my ($code, $regexp, $name) = @_;
+	croak "First parameter isn't a code referce (sub)" unless ref $code eq 'CODE';
+	
+	my $test = 0;
+	eval {
+		$code->();
+	};
+	if (my $error = $@) {
+		if ($error =~ /$regexp/) {
+			$test = 1 
+		}
+		else {
+			diag("Error message $error doesn't match against /$regexp/");
+		}
+	}
+
+	my $tb = Test::More->builder;
+	return $tb->ok($test, $name);
+}
