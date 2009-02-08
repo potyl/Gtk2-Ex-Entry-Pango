@@ -23,6 +23,7 @@ sub main {
 	test_set_markup();
 	test_set_empty_markup();
 	test_bad_usage();
+	return 0;
 }
 
 
