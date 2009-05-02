@@ -347,6 +347,45 @@ sub clear_empty_markup {
 
 
 
+=head2 get_clear_on_focus
+
+Returns if the widget's Pango markup will be cleared once the widget is focused
+and has no user text.
+
+=cut
+
+sub get_clear_on_focus {
+	my $self = shift;
+	return $self->get('clear-on-focus');
+}
+
+
+
+=head2 set_clear_on_focus
+
+Returns if the widget's Pango markup will be cleared once the widget is focused
+and has no user text.
+
+Parameters:
+
+=over
+
+=item * $value
+
+A boolean value that dictates if the Pango markup has to be cleared when the
+widget is focused and there's no text entered (the entry is empty).
+
+=back	
+
+=cut
+
+sub set_clear_on_focus {
+	my $self = shift;
+	my ($value) = @_;
+	return $self->set('clear-on-focus', $value);
+}
+
+
 #
 # Applies the markup to the widget. The markup string is parsed into a text to
 # be displayed and an attribute list (the styles to apply). The text is added
