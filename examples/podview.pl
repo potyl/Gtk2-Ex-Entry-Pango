@@ -159,6 +159,7 @@ sub create_widgets {
 	$button->signal_connect(clicked => sub {
 		$entry->signal_emit('activate');
 	});
+	$button->grab_focus();
 	
 	$window->show_all();
 	
