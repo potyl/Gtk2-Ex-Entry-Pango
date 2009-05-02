@@ -135,7 +135,12 @@ use Glib qw(TRUE FALSE);
 use Gtk2;
 
 
+# Module version
 our $VERSION = '0.06_01';
+
+
+# Emty Pango attributes list that's used to clear the previous markup
+my $EMPTY_ATTRLIST = Gtk2::Pango::AttrList->new();
 
 
 # See http://gtk2-perl.sourceforge.net/doc/pod/Glib/Object/Subclass.html
@@ -477,14 +482,14 @@ sub set_layout_attributes {
 		my $attributes = $self->{attributes};
 		if (! defined $attributes) {
 			# Clear the previous attributes, just in case...
-			$attributes = Gtk2::Pango::AttrList->new();
+			$attributes = $EMPTY_ATTRLIST;
 		}
 		$self->get_layout->set_attributes($attributes);
 	}
 	elsif ($self->get('clear-on-focus') and $self->has_focus) {
 		# The widget has focus and is empty, if the user requested that it be
 		# cleared when focused we have to honor it here.
-		my $attributes = Gtk2::Pango::AttrList->new();
+		my $attributes = $EMPTY_ATTRLIST;
 		$self->get_layout->set_text('');
 		$self->get_layout->set_attributes($attributes);
 		return;
