@@ -174,6 +174,14 @@ use Glib::Object::Subclass 'Gtk2::Entry' =>
 			'',
 			['readable', 'writable'],
 		),
+
+		Glib::ParamSpec->boolean(
+			'clear-on-focus',
+			'Clear the markup when the widget has focus',
+			'If the Pango markup to display has to cleared when the entry has focus.',
+			TRUE,
+			['readable', 'writable'],
+		),
 	],
 ;
 
@@ -364,13 +372,13 @@ sub apply_markup {
 		$self->request_redraw();
 	}
 	else {
-		# Change the entry's text. Mark this as an internal change as a we can't let
+		# Change the entry's text. Mark this as an internal change as we can't let
 		# the 'changed' callback reset the markup.
 		local $self->{internal} = TRUE;		
 		$self->set(text => $text);
 		
 		if ($self->{internal}) {
-			# The signal 'changed' wasn't emited (it can happen sometimes) so let's
+			# The signal 'changed' wasn't emited (it can happen sometimes) so lets
 			# request a refresh of the UI manually.
 			$self->request_redraw();
 		}
@@ -424,14 +432,27 @@ sub signal_emit_markup_changed {
 sub set_layout_attributes {
 	my $self = shift;
 
-	if ($self->get_text) {
+	if ($self->get_text ne '') {
+		# There's text in the widget apply the attributes (the requested pango
+		# text). If the're attributes simply clear the previous ones.
 		my $attributes = $self->{attributes};
 		if (! defined $attributes) {
+			# Clear the previous attributes, just in case...
 			$attributes = Gtk2::Pango::AttrList->new();
 		}
 		$self->get_layout->set_attributes($attributes);
 	}
+	elsif ($self->get('clear-on-focus') and $self->has_focus) {
+		# The widget has focus and is empty, if the user requested that it be
+		# cleared when focused we have to honor it here.
+		my $attributes = Gtk2::Pango::AttrList->new();
+		$self->get_layout->set_text('');
+		$self->get_layout->set_attributes($attributes);
+		return;
+	}
 	elsif ($self->{empty_markup}) {
+		# The widget is empty and the user wants it filled with a default text at
+		# all times.
 		$self->get_layout->set_text($self->{empty_text});
 		$self->get_layout->set_attributes($self->{empty_attributes});
 	}
