@@ -1,5 +1,9 @@
 Revision history for Perl extension Gtk2::Ex::Entry::Pango.
 
+0.06_01 Fri May  1 13:23:07 CEST 2009
+	- Default markup when the entry is empty is not displayed if when focused.
+
+
 0.05  Thu Apr 30 09:34:57 CEST 2009
 	- New release with all the changes from the 0.05_XX releases.
 
