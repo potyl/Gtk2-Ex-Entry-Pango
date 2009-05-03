@@ -165,11 +165,6 @@ use Glib::Object::Subclass 'Gtk2::Entry' =>
 			flags       => ['run-last'],
 			param_types => ['Glib::String'],
 		},
-
-		'clear-on-focus-changed' => {
-			flags       => ['run-last'],
-			param_types => ['Glib::Boolean'],
-		},
 	},
 
 
@@ -244,7 +239,6 @@ sub SET_PROPERTY {
 	}
 	else {
 		$self->{$field} = $value;
-		$self->signal_emit('clear-on-focus-changed' => $value);
 	}
 }
 
