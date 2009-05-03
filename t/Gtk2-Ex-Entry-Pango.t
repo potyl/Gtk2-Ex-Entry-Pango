@@ -5,7 +5,7 @@ use warnings;
 
 use Carp;
 
-use Gtk2::TestHelper tests => 34;
+use Gtk2::TestHelper tests => 42;
 
 BEGIN {
 	use_ok('Gtk2::Ex::Entry::Pango')
@@ -31,7 +31,7 @@ sub test_set_markup {
 	my $entry = Gtk2::Ex::Entry::Pango->new();
 	
 	# The styles always end at MAX INT and not at the lenght of the string. This
-	# code find the maximum size that a style can have.
+	# code finds the maximum size that a style can have.
 	$MAX_INT = get_styles($entry)->[0][1];
 	ok($MAX_INT > 0);
 
@@ -135,6 +135,10 @@ sub test_set_markup {
 			[0, $MAX_INT, undef],
 		]
 	);
+	
+	
+	# Test the clear on focus property
+	do_clear_on_focus($entry);
 }
 
 
@@ -148,7 +152,7 @@ sub test_set_empty_markup {
 	my $entry = Gtk2::Ex::Entry::Pango->new();
 	
 	# The styles always end at MAX INT and not at the lenght of the string. This
-	# code find the maximum size that a style can have.
+	# code finds the maximum size that a style can have.
 	$MAX_INT = get_styles($entry)->[0][1];
 	ok($MAX_INT > 0);
 
@@ -200,6 +204,28 @@ sub test_set_empty_markup {
 	is($entry->get_text(), "");
 	is($markup_signal, undef);
 	is($entry->{empty_attributes}, undef);
+	
+	do_clear_on_focus($entry);
+}
+
+
+#
+# Generic tests on the property 'clear_on_focus'
+#
+sub do_clear_on_focus {
+	my ($entry) = @_;
+	
+	# Test the clear on focus property
+	my $count = 0;
+	$entry->signal_connect(clear_on_focus_changed => sub{++$count});
+
+	ok($entry->get_clear_on_focus);
+	
+	is($count, 0);
+	$entry->set_clear_on_focus(FALSE);
+	
+	is($count, 1);
+	ok(!$entry->get_clear_on_focus);
 }
 
 
