@@ -217,7 +217,7 @@ sub do_clear_on_focus {
 	
 	# Test the clear on focus property
 	my $count = 0;
-	$entry->signal_connect(clear_on_focus_changed => sub{++$count});
+	$entry->signal_connect('notify::clear-on-focus' => sub{++$count});
 
 	ok($entry->get_clear_on_focus);
 	
