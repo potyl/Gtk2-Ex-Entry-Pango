@@ -132,7 +132,9 @@ use strict;
 use warnings;
 
 use Glib qw(TRUE FALSE);
-use Gtk2;
+# Gtk2 with Pango support
+use Gtk2 1.100;
+use Gtk2::Pango;
 
 
 # Module version
@@ -140,7 +142,10 @@ our $VERSION = '0.06_01';
 
 
 # Emty Pango attributes list that's used to clear the previous markup
-my $EMPTY_ATTRLIST = Gtk2::Pango::AttrList->new();
+my $EMPTY_ATTRLIST = ($Gtk2::VERSION >= 1.160) 
+	? Gtk2::Pango::AttrList->new() 
+	: Gtk2::Pango->parse_markup('')
+;
 
 
 # See http://gtk2-perl.sourceforge.net/doc/pod/Glib/Object/Subclass.html
