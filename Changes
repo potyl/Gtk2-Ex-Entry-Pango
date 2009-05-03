@@ -1,5 +1,9 @@
 Revision history for Perl extension Gtk2::Ex::Entry::Pango.
 
+0.06_02 Sun May  3 09:16:07 CEST 2009
+	- Fixed the property 'clear-on-focus'.
+
+
 0.06_01 Fri May  1 13:23:07 CEST 2009
 	- Default markup when the entry is empty is not displayed if when focused.
 	- Depending on Gtk2::Pango and on a version of Gtk2 that has Pango support.
