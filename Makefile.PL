@@ -15,6 +15,7 @@ WriteMakefile(
 	AUTHOR         => 'Emmanuel Rodriguez <potyl@cpan.org>',
 
 	PREREQ_PM      => {
-		Gtk2 => 0,
+		'Gtk2'         => '1.100', # Pango was first introduced here
+		'Gtk2::Pango'  => 0,
 	},
 );
