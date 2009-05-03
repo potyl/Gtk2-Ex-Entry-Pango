@@ -135,7 +135,7 @@ use Glib qw(TRUE FALSE);
 # Gtk2 with Pango support
 use Gtk2 1.100;
 use Gtk2::Pango;
-
+use Carp;
 
 # Module version
 our $VERSION = '0.06_01';
@@ -164,6 +164,11 @@ use Glib::Object::Subclass 'Gtk2::Entry' =>
 		'empty-markup-changed' => {
 			flags       => ['run-last'],
 			param_types => ['Glib::String'],
+		},
+
+		'clear-on-focus-changed' => {
+			flags       => ['run-last'],
+			param_types => ['Glib::Boolean'],
 		},
 	},
 
@@ -236,6 +241,10 @@ sub SET_PROPERTY {
 		}
 		$self->{$field} = $value;
 		$self->signal_emit('empty-markup-changed' => $value);
+	}
+	else {
+		$self->{$field} = $value;
+		$self->signal_emit('clear-on-focus-changed' => $value);
 	}
 }
 
@@ -366,7 +375,7 @@ and has no user text.
 
 sub get_clear_on_focus {
 	my $self = shift;
-	return $self->get('clear-on-focus');
+	return $self->get('clear_on_focus');
 }
 
 
@@ -392,7 +401,7 @@ widget is focused and there's no text entered (the entry is empty).
 sub set_clear_on_focus {
 	my $self = shift;
 	my ($value) = @_;
-	return $self->set('clear-on-focus', $value);
+	return $self->set(clear_on_focus => $value);
 }
 
 
@@ -491,7 +500,7 @@ sub set_layout_attributes {
 		}
 		$self->get_layout->set_attributes($attributes);
 	}
-	elsif ($self->get('clear-on-focus') and $self->has_focus) {
+	elsif ($self->get_clear_on_focus and $self->has_focus) {
 		# The widget has focus and is empty, if the user requested that it be
 		# cleared when focused we have to honor it here.
 		my $attributes = $EMPTY_ATTRLIST;
