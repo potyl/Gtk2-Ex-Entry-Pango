@@ -138,7 +138,7 @@ use Gtk2::Pango;
 use Carp;
 
 # Module version
-our $VERSION = '0.06_02';
+our $VERSION = '0.06';
 
 
 # Emty Pango attributes list that's used to clear the previous markup
