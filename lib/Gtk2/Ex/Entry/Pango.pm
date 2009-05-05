@@ -46,7 +46,6 @@ C<Gtk2::Ex::Entry::Pango> is a subclass of L<Gtk2::Entry>.
 	               +----Gtk2::Entry
 	                    +----Gtk2::Ex::Entry::Pango
 
-
 =head1 DESCRIPTION
 
 C<Gtk2::Ex::Entry::Pango> is a C<Gtk2::Entry> that can accept Pango markup for
@@ -138,12 +137,12 @@ use Gtk2::Pango;
 use Carp;
 
 # Module version
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 
 
 # Emty Pango attributes list that's used to clear the previous markup
-my $EMPTY_ATTRLIST = ($Gtk2::VERSION >= 1.160) 
-	? Gtk2::Pango::AttrList->new() 
+my ($EMPTY_ATTRLIST) = ($Gtk2::VERSION >= 1.160)
+	? (Gtk2::Pango::AttrList->new())
 	: Gtk2::Pango->parse_markup('')
 ;
 
