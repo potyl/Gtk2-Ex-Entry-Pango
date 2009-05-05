@@ -1,5 +1,10 @@
 Revision history for Perl extension Gtk2::Ex::Entry::Pango.
 
+0.07 Tue May  5 07:45:03 CEST 2009
+	- Bug fix: Old versions of Gtk2 would fail to have a proper $EMPTY_ATTRLIST
+	  Patch by Matthew Braid
+
+
 0.06 Mon May  4 20:01:15 CEST 2009
 	- New release with all the changes from the 0.06_XX releases.
 
