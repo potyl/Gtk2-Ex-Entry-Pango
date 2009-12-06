@@ -5,7 +5,7 @@ DEST=target
 
 VERSION=$(shell perl -le "print `grep VERSION lib/Gtk2/Ex/Entry/Pango.pm`")
 PACKAGE=Gtk2-Ex-Entry-Pango
-v=$(shell git config --global user.email)
+EMAIL=$(shell git config --global user.email)
 
 
 .PHONY: info
