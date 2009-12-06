@@ -1,5 +1,9 @@
 Revision history for Perl extension Gtk2::Ex::Entry::Pango.
 
+0.08 Sun Dec  6 20:30:19 CET 2009
+	- Fix an undef warning when reverting to the default empty text.
+
+
 0.07 Tue May  5 07:45:03 CEST 2009
 	- Bug fix: Old versions of Gtk2 would fail to have a proper $EMPTY_ATTRLIST
 	  Patch by Matthew Braid
