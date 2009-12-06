@@ -207,8 +207,8 @@ sub INIT_INSTANCE {
 	$self->{attributes} = undef;
 	
 	# The Pango text and attributes to apply when the entry has no text.
-	$self->{'empty_attributes'} = undef;
-	$self->{'empty_text'} = undef;
+	$self->{empty_attributes} = undef;
+	$self->{empty_text} = '';
 }
 
 
@@ -231,7 +231,7 @@ sub SET_PROPERTY {
 			($self->{empty_attributes}, $self->{empty_text}) = Gtk2::Pango->parse_markup($value);
 		}
 		else {
-			($self->{empty_attributes}, $self->{empty_text}) = (undef, undef);
+			($self->{empty_attributes}, $self->{empty_text}) = (undef, '');
 		}
 		$self->{$field} = $value;
 		$self->signal_emit('empty-markup-changed' => $value);
