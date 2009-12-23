@@ -1,5 +1,9 @@
 Revision history for Perl extension Gtk2::Ex::Entry::Pango.
 
+0.09 Wed Dec 23 19:53:57 CET 2009
+	- Issue 1 - test failure under locale.
+
+
 0.08 Sun Dec  6 20:30:19 CET 2009
 	- Fix an undef warning when reverting to the default empty text.
 
