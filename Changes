@@ -1,5 +1,9 @@
 Revision history for Perl extension Gtk2::Ex::Entry::Pango.
 
+0.10 Thu Aug  5 23:04:41 CEST 2010
+	- Version bump in order to make a new CPAN release (the module disappeared from CPAN).
+
+
 0.09 Wed Dec 23 19:53:57 CET 2009
 	- Issue 1 - test failure under locale.
 
